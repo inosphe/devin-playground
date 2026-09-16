@@ -429,6 +429,36 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=中洲屋台街"
   },
   {
+   "id": "p_nikuichi",
+   "name": "니쿠이치 하카타 야키니쿠",
+   "area": "hakata",
+   "tags": [
+    "맛집",
+    "저녁",
+    "고기"
+   ],
+   "minutes": 90,
+   "open": "17:00",
+   "close": "24:00",
+   "note": "하카타 인기 야키니쿠. 주말 저녁 웨이팅 주의, 예약 권장",
+   "maps": "https://www.google.com/maps/search/?api=1&query=にくいち+博多+焼肉"
+  },
+  {
+   "id": "p_yakiniku_king",
+   "name": "야키니쿠 킹 텐진점",
+   "area": "tenjin",
+   "tags": [
+    "맛집",
+    "저녁",
+    "고기"
+   ],
+   "minutes": 90,
+   "open": "11:00",
+   "close": "23:00",
+   "note": "가성비 뷔페형 야키니쿠 체인",
+   "maps": "https://www.google.com/maps/search/?api=1&query=焼肉きんぐ+天神"
+  },
+  {
    "id": "p_kushida",
    "name": "구시다 신사 + 가와바타 상점가",
    "area": "hakata",
