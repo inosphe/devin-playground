@@ -95,6 +95,11 @@
   .info .contact { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #eee }
   .info .contact .cv { font-weight:600; color:#2e4057; white-space:nowrap }
   .info .contact .cn { color:#888; font-size:11px }
+  .pscn { font-weight:700; color:#2e4057; font-size:12px; margin:10px 0 2px; border-bottom:1px solid #e8ecf3 }
+  .phr { display:flex; flex-direction:column; padding:4px 0; border-bottom:1px dashed #eee }
+  .phr .jp { font-size:14px; font-weight:600 }
+  .phr .kr { font-size:12px; color:#444 }
+  .phr .rom { font-size:11px; color:#999 }
 
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#c0504d; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
 
@@ -294,6 +299,12 @@ function renderInfo(){
     <details><summary>여행 팁 · 주의사항</summary><div class="body"><ul>${
       INFO.tips.map(t=>`<li>${esc(t)}</li>`).join("")
     }</ul></div></details>
+    <details><summary>일본어 회화 가이드</summary><div class="body">${
+      (INFO.phrases||[]).map(p=>p.scene
+        ?`<div class="pscn">${esc(p.scene)}</div>`
+        :`<div class="phr"><span class="jp">${esc(p.jp)}</span><span class="kr">${esc(p.kr)}</span><span class="rom">${esc(p.rom)}</span></div>`
+      ).join("")
+    }</div></details>
   </div>`;
 }
 
