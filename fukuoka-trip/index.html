@@ -32,6 +32,9 @@
   .tl-item::before { content:""; position:absolute; left:-21px; top:15px; width:10px; height:10px; border-radius:50%; background:#2e4057; border:2px solid #fff; }
   .tl-item.slot::before { background:#d9a441; }
   .tl-item.mandatory::before { background:#c0504d; }
+  .tl-item.past .card { opacity:.55; }
+  .tl-now { position:relative; margin:12px 0; height:0; border-top:2px dashed #e04338; }
+  .tl-now span { position:absolute; right:0; top:-16px; font-size:10px; font-weight:700; color:#e04338; background:#f6f4f0; padding:0 4px }
 
   .card { background:#fff; border-radius:10px; padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
   .fixed-card { border-left:4px solid #2e4057; }
@@ -68,6 +71,8 @@
   .chosen button { background:#c0504d; color:#fff }
   .chosen a { font-size:11px; color:#2e4057; }
   .blocked { margin-top:8px; border-top:1px dashed #ddd; padding-top:6px; font-size:11px; color:#999; }
+  .alts { margin-top:8px; }
+  .alts summary { font-size:11px; color:#2e4057; cursor:pointer; padding:4px 0; font-weight:600 }
   .blocked::before { content:"필터링된 후보"; display:block; font-weight:600; color:#aaa; margin-bottom:3px; }
   .blocked-row { display:flex; justify-content:space-between; padding:1px 0; gap:8px}
   .blocked-row .breason { color:#c0504d; white-space:nowrap }
@@ -105,6 +110,7 @@
   </div>
   <span id="conn">연결 중…</span>
   <span id="now"></span>
+  <span id="countdown"></span>
   <div class="prefs" id="prefs"></div>
 </header>
 <main id="main">로딩 중…</main>
@@ -157,7 +163,27 @@ function urgency(date,start,end){
 function tick(){
   const n=new Date();
   document.getElementById("now").textContent =
-    "현재 "+fmt(n.getHours())+":"+fmt(n.getMinutes());
+    "현재 "+(n.getMonth()+1)+"/"+n.getDate()+" "+fmt(n.getHours())+":"+fmt(n.getMinutes());
+  // countdown: flight f1 + next upcoming event
+  const flight=FIXED.find(f=>f.kind==="flight");
+  const evts=[...FIXED,...SLOTS].map(e=>({d:e.date+"T"+e.start+":00",t:e.title||e.label}));
+  const next=evts.filter(e=>new Date(e.d)>n).sort((a,b)=>a.d.localeCompare(b.d))[0];
+  let cd="";
+  if(flight){
+    const dep=new Date(flight.date+"T"+flight.start+":00");
+    if(dep>n){
+      const dh=Math.floor((dep-n)/36e5);
+      cd+="✈ "+(dh>=24?("D-"+Math.floor(dh/24)+" " ):"")+(dh%24)+"시간 후 출발";
+    }
+  }
+  if(next){
+    const t=new Date(next.d), dm=Math.floor((t-n)/6e4);
+    cd+=(cd?" · ":"")+"다음 일정 "+next.t+"까지 ";
+    cd+=dm>=1440?(Math.floor(dm/1440)+"일 "):("");
+    cd+=dm>=60?((Math.floor(dm/60)%24)+"시간 "):"";
+    cd+=(dm%60)+"분";
+  }
+  document.getElementById("countdown").textContent=cd;
 }
 setInterval(()=>{tick();render()},60000);
 
@@ -169,8 +195,11 @@ function fits(slot,c){
 function evaluate(slot,c,ignoreSel){
   if(STATE.prefs.dislikes.some(d=>c.tags.includes(d)||c.name===d))
     return {ok:false,reason:"선호 제외"};
-  if(!ignoreSel&&Object.entries(STATE.selections).some(([sid,pid])=>pid===c.id&&sid!==slot.id))
-    return {ok:false,reason:"다른 슬롯에 선택됨"};
+  const selSlot=Object.entries(STATE.selections).find(([sid,pid])=>pid===c.id&&sid!==slot.id);
+  if(!ignoreSel&&selSlot){
+    const sl=SLOTS.find(x=>x.id===selSlot[0]);
+    return {ok:false,reason:"선택됨: "+(sl?sl.label:selSlot[0])};
+  }
   const tr=TRAVEL[slot.anchor+"|"+c.area];
   if(tr==null)
     return {ok:false,reason:"이동 불가(다른 지역)"};
@@ -270,9 +299,19 @@ function render(){
     FIXED.filter(f=>f.date===day.date).forEach(f=>items.push({type:"fixed",o:f,t:f.start}));
     SLOTS.filter(s=>s.date===day.date).forEach(s=>items.push({type:"slot",o:s,t:s.start}));
     items.sort((a,b)=>a.t.localeCompare(b.t));
+    const now=new Date();
+    const todayStr=now.getFullYear()+"-"+fmt(now.getMonth()+1)+"-"+fmt(now.getDate());
+    const nowMin=fmt(now.getHours())+":"+fmt(now.getMinutes());
+    const isToday=day.date===todayStr;
+    let nowLinePlaced=false;
+    const nowLine=()=>{nowLinePlaced=true;
+      const nl=document.createElement("div");nl.className="tl-now";
+      nl.innerHTML=`<span>지금 ${nowMin}</span>`;tl.appendChild(nl);};
     items.forEach(it=>{
+      if(isToday&&!nowLinePlaced&&it.t>nowMin) nowLine();
       const w=document.createElement("div");
-      w.className="tl-item"+(it.type==="slot"?" slot":"")+((it.type==="fixed"&&it.o.mandatory)?" mandatory":"");
+      w.className="tl-item"+(it.type==="slot"?" slot":"")+((it.type==="fixed"&&it.o.mandatory)?" mandatory":"")
+        +(urgency(day.date,it.o.start,it.o.end).cls==="urg-past"?" past":"");
       const timeDiv=document.createElement("div");timeDiv.className="tl-time";
       timeDiv.innerHTML=it.o.start+"<br>"+it.o.end;
       w.appendChild(timeDiv);
@@ -300,15 +339,7 @@ function render(){
         let inner=`<div class="title-row"><span class="label">${esc(s.label)}</span>
           <span class="badge-urg ${urgency(s.date,s.start,s.end).cls}">${urgency(s.date,s.start,s.end).txt}</span></div>
           <div class="t">거점:${s.anchor}${s.constraints?" · "+esc(s.constraints):""}</div>`;
-        if(chosen){
-          inner+=`<div class="chosen">✔ <span class="name">${esc(chosen.name)}</span>
-            <a href="${chosen.maps}" target="_blank">Google Maps</a>
-            <span class="meta">${esc(chosen.note)}</span>
-            <span class="spacer"></span>
-            <button onclick="pick('${s.id}',null)">해제</button></div>`;
-        }else{
-          const r=route(s);
-          inner+=`<div class="recs">`+ r.top.map(c=>`
+        const recHtml=(c)=>`
             <div class="rec"><div class="top">
               <span class="name">${esc(c.name)}</span>
               ${c.future===0?'<span class="badge-urg urg-now">마지막 기회</span>':`<span class="badge-urg urg-future">이후 ${c.future}회</span>`}
@@ -316,12 +347,27 @@ function render(){
               <span class="spacer"></span>
               <button onclick="pick('${s.id}','${c.id}')">선택</button></div>
               <div class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</div>
-            </div>`).join("")+`</div>`;
-          if(r.blocked.length){
-            inner+=`<div class="blocked">`+r.blocked.map(b=>
+            </div>`;
+        const blockedHtml=(r)=>r.blocked.length?`<div class="blocked">`+r.blocked.map(b=>
               `<div class="blocked-row"><span class="bname">${esc(b.name)}</span><span class="breason">${b.reason}</span></div>`
-            ).join("")+`</div>`;
+            ).join("")+`</div>`:'';
+        if(chosen){
+          const r=route(s);
+          const rest=r.top.filter(c=>c.id!==chosen.id);
+          inner+=`<div class="chosen">✔ <span class="name">${esc(chosen.name)}</span>
+            <a href="${chosen.maps}" target="_blank">Google Maps</a>
+            <span class="meta">${esc(chosen.note)}</span>
+            <span class="spacer"></span>
+            <button onclick="pick('${s.id}',null)">해제</button></div>`;
+          if(rest.length){
+            inner+=`<details class="alts"><summary>다른 후보 ${rest.length}개 보기</summary>
+              <div class="recs">`+rest.map(recHtml).join("")+`</div></details>`;
           }
+          inner+=blockedHtml(r);
+        }else{
+          const r=route(s);
+          inner+=`<div class="recs">`+ r.top.map(recHtml).join("")+`</div>`;
+          inner+=blockedHtml(r);
         }
         card.innerHTML=inner;
       }
