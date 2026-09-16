@@ -201,6 +201,9 @@ function fits(slot,c){
 function evaluate(slot,c,ignoreSel){
   if(STATE.prefs.dislikes.some(d=>c.tags.includes(d)||c.name===d))
     return {ok:false,reason:"선호 제외"};
+  const catTags=c.tags.filter(t=>WEIGHT_KEYS.includes(t));
+  if(catTags.length&&catTags.every(t=>(STATE.prefs.weights[t]??0)===0))
+    return {ok:false,reason:"카테고리 제외("+catTags.join("/")+")"};
   const selSlot=Object.entries(STATE.selections).find(([sid,pid])=>pid===c.id&&sid!==slot.id);
   if(!ignoreSel&&selSlot){
     const sl=SLOTS.find(x=>x.id===selSlot[0]);
@@ -269,10 +272,12 @@ function renderPrefs(){
     el.appendChild(s);
   });
   WEIGHT_KEYS.forEach(k=>{
-    const lab=document.createElement("label");
-    lab.innerHTML=`${k} <input type="range" min="0" max="5" value="${p.weights[k]??0}">`;
-    lab.querySelector("input").onchange=e=>send({type:"prefs",data:{weights:{...p.weights,[k]:+e.target.value}}});
-    el.appendChild(lab);
+    const on=(p.weights[k]??0)>0;
+    const s=document.createElement("span");
+    s.className="pace dislike-chip"+(on?"":" off");
+    s.textContent=(on?"☑ ":"☐ ")+k;
+    s.onclick=()=>send({type:"prefs",data:{weights:{...p.weights,[k]:on?0:3}}});
+    el.appendChild(s);
   });
 }
 
