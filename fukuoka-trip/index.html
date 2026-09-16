@@ -44,7 +44,9 @@
   .title { font-weight:600; font-size:14px; }
   .kind { font-size:10px; padding:1px 6px; border-radius:8px; background:#e8ecf3; color:#2e4057; }
   .badge-mand { font-size:10px; padding:1px 6px; border-radius:8px; background:#c0504d; color:#fff; font-weight:700 }
-  .badge-urg { font-size:10px; padding:1px 6px; border-radius:8px; font-weight:700 }
+  .badge-urg { font-size:10px; padding:1px 6px; border-radius:8px; font-weight:700; white-space:nowrap; }
+  .chance { width:64px; text-align:center; flex-shrink:0; }
+  .rec .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .urg-past { background:#ddd; color:#777 }
   .urg-now { background:#e04338; color:#fff }
   .urg-soon { background:#ff9800; color:#fff }
@@ -341,10 +343,10 @@ function render(){
           <div class="t">거점:${s.anchor}${s.constraints?" · "+esc(s.constraints):""}</div>`;
         const recHtml=(c)=>`
             <div class="rec"><div class="top">
+              ${c.future===0?'<span class="badge-urg chance urg-now">마지막 기회</span>':`<span class="badge-urg chance urg-future">+${c.future}회</span>`}
               <span class="name">${esc(c.name)}</span>
-              ${c.future===0?'<span class="badge-urg urg-now">마지막 기회</span>':`<span class="badge-urg urg-future">이후 ${c.future}회</span>`}
-              <a href="${c.maps}" target="_blank">Maps</a>
               <span class="spacer"></span>
+              <a href="${c.maps}" target="_blank">Maps</a>
               <button onclick="pick('${s.id}','${c.id}')">선택</button></div>
               <div class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</div>
             </div>`;
