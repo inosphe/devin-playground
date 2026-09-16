@@ -115,7 +115,7 @@ const {DAYS, FIXED, SLOTS, CANDIDATES, DEFAULT_PREFS, INFO} = DATA;
 const TRAVEL = {};
 DATA.TRAVEL.forEach(t=>TRAVEL[t.a+"|"+t.b]=t.m);
 
-const KEY="fukuoka-trip-v1";
+const KEY="fukuoka-trip-v2";
 let STATE = JSON.parse(localStorage.getItem(KEY)||"null")
   || {version:0, prefs:JSON.parse(JSON.stringify(DEFAULT_PREFS)), selections:{}};
 if(!STATE.prefs) STATE.prefs = JSON.parse(JSON.stringify(DEFAULT_PREFS));
@@ -166,10 +166,10 @@ function fits(slot,c){
   const o=minutes(c.open), cl=c.close>="24:00"?1440:minutes(c.close);
   return Math.min(e,cl)-Math.max(s,o)>=Math.min(c.minutes,30);
 }
-function evaluate(slot,c){
+function evaluate(slot,c,ignoreSel){
   if(STATE.prefs.dislikes.some(d=>c.tags.includes(d)||c.name===d))
     return {ok:false,reason:"선호 제외"};
-  if(Object.entries(STATE.selections).some(([sid,pid])=>pid===c.id&&sid!==slot.id))
+  if(!ignoreSel&&Object.entries(STATE.selections).some(([sid,pid])=>pid===c.id&&sid!==slot.id))
     return {ok:false,reason:"다른 슬롯에 선택됨"};
   const tr=TRAVEL[slot.anchor+"|"+c.area];
   if(tr==null)
@@ -196,11 +196,19 @@ function evaluate(slot,c){
   if(STATE.prefs.pace==="packed")sc+=0.3;
   return {ok:true,score:+sc.toFixed(2),travel_min:tr};
 }
+function slotOrder(s){return s.date+s.start}
+function futureChances(slot,c){
+  return SLOTS.filter(s=>slotOrder(s)>slotOrder(slot))
+    .filter(s=>evaluate(s,c,true).ok).length;
+}
 function route(slot,n=4){
   const ok=[], blocked=[];
   CANDIDATES.forEach(c=>{
     const r=evaluate(slot,c);
-    if(r.ok)ok.push({...c,score:r.score,travel_min:r.travel_min});
+    if(r.ok){
+      const future=futureChances(slot,c);
+      ok.push({...c,score:r.score+(future===0?1.2:0)-(future*0.1),travel_min:r.travel_min,future});
+    }
     else blocked.push({...c,reason:r.reason});
   });
   ok.sort((a,b)=>b.score-a.score);
@@ -303,6 +311,7 @@ function render(){
           inner+=`<div class="recs">`+ r.top.map(c=>`
             <div class="rec"><div class="top">
               <span class="name">${esc(c.name)}</span>
+              ${c.future===0?'<span class="badge-urg urg-now">마지막 기회</span>':`<span class="badge-urg urg-future">이후 ${c.future}회</span>`}
               <a href="${c.maps}" target="_blank">Maps</a>
               <span class="spacer"></span>
               <button onclick="pick('${s.id}','${c.id}')">선택</button></div>
@@ -326,7 +335,6 @@ function render(){
   info.innerHTML=renderInfo();
   main.appendChild(info);
 }
-
 render();
 </script>
 </body>
