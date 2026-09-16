@@ -177,6 +177,7 @@ let STATE = JSON.parse(localStorage.getItem(KEY)||"null")
   || {version:0, prefs:JSON.parse(JSON.stringify(DEFAULT_PREFS)), selections:{},
       votes:{}, budget:{limit:0,items:{}}, packing:[], done:[]};
 if(!STATE.prefs) STATE.prefs = JSON.parse(JSON.stringify(DEFAULT_PREFS));
+const OPEN = {};
 document.getElementById("conn").textContent="로컬 저장";
 
 function send(msg){
@@ -573,7 +574,7 @@ function render(){
           inner+=`<div class="ch-total ${total>span?"over":""}">
             예상 소요 ${hhmm(total)} / 슬롯 ${hhmm(span)}${total>span?` — ⚠ ${hhmm(total-span)} 초과 (추가는 가능)`:""}</div>`;
           if(rest.length){
-            inner+=`<details class="alts"><summary>추가 후보 ${rest.length}개 보기</summary>
+            inner+=`<details class="alts" ${OPEN['sel:'+s.id]!==false?"open":""} ontoggle="OPEN['sel:${s.id}']=this.open"><summary>추가 후보 ${rest.length}개 보기</summary>
               <div class="recs">`+rest.map(recHtml).join("")+`</div></details>`;
           }
           inner+=blockedHtml(r);
@@ -581,7 +582,7 @@ function render(){
           const r=route(s);
           inner+=`<div class="recs">`+ r.top.map(recHtml).join("")+`</div>`;
           if(r.rest.length){
-            inner+=`<details class="alts"><summary>나머지 추천 ${r.rest.length}개</summary>
+            inner+=`<details class="alts" ${OPEN['sel:'+s.id]?"open":""} ontoggle="OPEN['sel:${s.id}']=this.open"><summary>나머지 추천 ${r.rest.length}개</summary>
               <div class="recs">`+r.rest.map(recHtml).join("")+`</div></details>`;
           }
           inner+=blockedHtml(r);
