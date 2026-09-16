@@ -399,7 +399,7 @@ function route(slot,n=4){
   });
   ok.sort((a,b)=>b.score-a.score);
   blocked.sort((a,b)=>a.reason.localeCompare(b.reason));
-  return {top:ok.slice(0,n), blocked};
+  return {top:ok.slice(0,n), rest:ok.slice(n), blocked};
 }
 
 const esc=s=>s?String(s).replace(/</g,"&lt;"):"";
@@ -522,7 +522,7 @@ function render(){
             ).join("")+`</div>`:'';
         if(chosen){
           const r=route(s);
-          const rest=r.top.filter(c=>c.id!==chosen.id);
+          const rest=[...r.top,...r.rest].filter(c=>c.id!==chosen.id);
           inner+=`<div class="chosen">✔ <span class="name">${esc(chosen.name)}</span>
             <a href="${chosen.maps}" target="_blank">Google Maps</a>
             <span class="meta">${esc(chosen.note)}</span>
@@ -536,6 +536,10 @@ function render(){
         }else{
           const r=route(s);
           inner+=`<div class="recs">`+ r.top.map(recHtml).join("")+`</div>`;
+          if(r.rest.length){
+            inner+=`<details class="alts"><summary>나머지 추천 ${r.rest.length}개</summary>
+              <div class="recs">`+r.rest.map(recHtml).join("")+`</div></details>`;
+          }
           inner+=blockedHtml(r);
         }
         card.innerHTML=inner;
