@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>후쿠오카·유후인 일정 라우터</title>
+<style>
+  * { box-sizing: border-box; font-family: -apple-system, "Pretendard", sans-serif; }
+  body { margin: 0; background: #f6f4f0; color: #222; }
+  header { padding: 16px 20px; background: #2e4057; color: #fff; display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
+  header h1 { font-size: 18px; margin: 0; }
+  header .sub { font-size: 12px; opacity:.8 }
+  .prefs { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto; font-size:13px}
+  .prefs label { display:flex; gap:4px; align-items:center; background:#3d5472; padding:4px 8px; border-radius:14px}
+  .prefs input[type=range]{width:70px}
+  main { max-width: 900px; margin: 0 auto; padding: 16px; }
+  .day { margin-bottom: 28px; }
+  .day h2 { font-size: 15px; color:#2e4057; border-bottom: 2px solid #2e4057; padding-bottom:4px;}
+  .fixed, .slot { background:#fff; border-radius:10px; padding:10px 14px; margin:8px 0; box-shadow:0 1px 3px rgba(0,0,0,.08);}
+  .fixed { border-left:4px solid #2e4057; }
+  .fixed .t { font-size:12px; color:#666 }
+  .fixed .title { font-weight:600; }
+  .fixed .note { font-size:12px; color:#777; margin-top:2px}
+  .kind { font-size:11px; padding:1px 6px; border-radius:8px; background:#e8ecf3; color:#2e4057; margin-right:6px}
+  .slot { border-left:4px solid #d9a441; }
+  .slot .label { font-size:13px; font-weight:600; color:#a0720a }
+  .slot .t { font-size:12px; color:#666 }
+  .recs { margin-top:8px; display:grid; gap:6px; }
+  .rec { display:flex; align-items:center; gap:8px; border:1px solid #eee; border-radius:8px; padding:7px 10px; font-size:13px}
+  .rec .name { font-weight:600 }
+  .rec .meta { font-size:11px; color:#777 }
+  .rec .spacer{flex:1}
+  .rec button, .chosen button { font-size:11px; padding:3px 9px; border:0; border-radius:6px; cursor:pointer }
+  .rec button { background:#2e4057; color:#fff }
+  .rec a { font-size:11px; color:#2e4057; text-decoration:none; border:1px solid #c5ccd6; padding:2px 7px; border-radius:6px}
+  .chosen { background:#e9f4e4; border:1px solid #b7d8a8; border-radius:8px; padding:7px 10px; margin-top:8px; display:flex; gap:8px; align-items:center; font-size:13px}
+  .chosen .name{font-weight:700}
+  .chosen button { background:#c0504d; color:#fff }
+  .chosen a { font-size:11px; color:#2e4057; }
+  .dislike-chip { cursor:pointer }
+  .dislike-chip.off { opacity:.45; text-decoration:line-through }
+  .pace { background:#3d5472; padding:4px 8px; border-radius:14px; cursor:pointer }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>후쿠오카·유후인 3박4일</h1>
+    <div class="sub">2026.10.1–10.4 · 2명 · 선호 기반 시간대별 추천</div>
+  </div>
+  <div class="prefs" id="prefs"></div>
+</header>
+<main id="main">로딩 중…</main>
+<script src="data.js"></script>
+<script>
+const {DAYS, FIXED, SLOTS, CANDIDATES, DEFAULT_PREFS} = DATA;
+const TRAVEL = {};
+DATA.TRAVEL.forEach(t=>TRAVEL[t.a+"|"+t.b]=t.m);
+
+const LS_PREFS="ftp_prefs", LS_SEL="ftp_selections";
+const loadPrefs=()=>{try{return JSON.parse(localStorage[LS_PREFS])}catch(e){} return JSON.parse(JSON.stringify(DEFAULT_PREFS))};
+const loadSel=()=>{try{return JSON.parse(localStorage[LS_SEL])}catch(e){} return {}};
+const save=()=>{localStorage[LS_PREFS]=JSON.stringify(PREFS);localStorage[LS_SEL]=JSON.stringify(SELECTIONS)};
+let PREFS=loadPrefs(), SELECTIONS=loadSel();
+
+const WEIGHT_KEYS=["맛집","쇼핑","카페","관광","자연","온천"];
+const DISLIKE_OPTS=["곱창","장어","날것"];
+const minutes=t=>{const[h,m]=t.split(":").map(Number);return h*60+m};
+
+function fits(slot,c){
+  const s=minutes(slot.start), e=Math.min(minutes(slot.end),1440);
+  const o=minutes(c.open), cl=c.close>="24:00"?1440:minutes(c.close);
+  return Math.min(e,cl)-Math.max(s,o)>=Math.min(c.minutes,30);
+}
+function score(slot,c){
+  if(PREFS.dislikes.some(d=>c.tags.includes(d)||c.name===d))return null;
+  if(!fits(slot,c))return null;
+  let sc=0;
+  c.tags.forEach(t=>sc+=PREFS.weights[t]??0.5);
+  const hint=slot.meal_hint;
+  if(hint){
+    const mm={brunch:["브런치","점심","빠름","맛집"],lunch:["점심","맛집"],dinner:["저녁","맛집"]};
+    sc += c.tags.some(t=>mm[hint].includes(t))?1.5:-1.5;
+  }
+  const tr=TRAVEL[slot.anchor+"|"+c.area];
+  if(tr==null)return null;
+  sc-=tr/15;
+  const span=Math.min(minutes(slot.end),1440)-minutes(slot.start);
+  if(span<=120&&c.tags.includes("빠름"))sc+=1;
+  if(PREFS.pace==="packed")sc+=0.3;
+  return +sc.toFixed(2);
+}
+function recommend(slot,n=4){
+  return CANDIDATES.map(c=>{
+    const s=score(slot,c);
+    return s==null?null:{...c,score:s,travel_min:TRAVEL[slot.anchor+"|"+c.area]};
+  }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,n);
+}
+
+const esc=s=>s?String(s).replace(/</g,"&lt;"):"";
+
+function renderPrefs(){
+  const el=document.getElementById("prefs");el.innerHTML="";
+  const pace=document.createElement("span");
+  pace.className="pace";pace.textContent=PREFS.pace==="packed"?"빽빽한 일정":"여유 일정";
+  pace.onclick=()=>{PREFS.pace=PREFS.pace==="packed"?"relaxed":"packed";save();render()};
+  el.appendChild(pace);
+  DISLIKE_OPTS.forEach(d=>{
+    const on=PREFS.dislikes.includes(d);
+    const s=document.createElement("span");
+    s.className="pace dislike-chip"+(on?"":" off");
+    s.textContent=d+(on?" 제외":" 허용");
+    s.onclick=()=>{PREFS.dislikes=on?PREFS.dislikes.filter(x=>x!==d):[...PREFS.dislikes,d];save();render()};
+    el.appendChild(s);
+  });
+  WEIGHT_KEYS.forEach(k=>{
+    const lab=document.createElement("label");
+    lab.innerHTML=`${k} <input type="range" min="0" max="5" value="${PREFS.weights[k]??0}">`;
+    lab.querySelector("input").onchange=e=>{PREFS.weights[k]=+e.target.value;save();render()};
+    el.appendChild(lab);
+  });
+}
+
+function pick(slotId,placeId){
+  if(placeId==null)delete SELECTIONS[slotId];else SELECTIONS[slotId]=placeId;
+  save();render();
+}
+
+function render(){
+  renderPrefs();
+  const main=document.getElementById("main");main.innerHTML="";
+  DAYS.forEach(day=>{
+    const div=document.createElement("div");div.className="day";
+    div.innerHTML=`<h2>${day.label}</h2>`;
+    const items=[];
+    FIXED.filter(f=>f.date===day.date).forEach(f=>items.push({type:"fixed",o:f,t:f.start}));
+    SLOTS.filter(s=>s.date===day.date).forEach(s=>items.push({type:"slot",o:s,t:s.start}));
+    items.sort((a,b)=>a.t.localeCompare(b.t));
+    items.forEach(it=>{
+      if(it.type==="fixed"){
+        const f=it.o;
+        const e=document.createElement("div");e.className="fixed";
+        e.innerHTML=`<div class="t">${f.start}–${f.end}</div>
+          <div class="title"><span class="kind">${f.kind}</span>${esc(f.title)}</div>
+          <div class="note">${esc(f.note)}</div>`;
+        div.appendChild(e);
+      }else{
+        const s=it.o;
+        const e=document.createElement("div");e.className="slot";
+        const chosen=CANDIDATES.find(c=>c.id===SELECTIONS[s.id]);
+        let inner=`<div class="label">${esc(s.label)}</div>
+          <div class="t">${s.start}–${s.end} · 거점:${s.anchor}${s.constraints?" · "+esc(s.constraints):""}</div>`;
+        if(chosen){
+          inner+=`<div class="chosen">✔ <span class="name">${esc(chosen.name)}</span>
+            <a href="${chosen.maps}" target="_blank">Google Maps</a>
+            <span class="meta">${esc(chosen.note)}</span>
+            <span class="spacer"></span>
+            <button onclick="pick('${s.id}',null)">해제</button></div>`;
+        }else{
+          inner+=`<div class="recs">`+recommend(s).map(r=>`
+            <div class="rec">
+              <span class="name">${esc(r.name)}</span>
+              <a href="${r.maps}" target="_blank">Maps</a>
+              <span class="meta">${r.minutes}분 · 이동${r.travel_min}분 · ${r.tags.join("/")} · ${esc(r.note)}</span>
+              <span class="spacer"></span>
+              <button onclick="pick('${s.id}','${r.id}')">선택</button>
+            </div>`).join("")+`</div>`;
+        }
+        e.innerHTML=inner;
+        div.appendChild(e);
+      }
+    });
+    main.appendChild(div);
+  });
+}
+render();
+</script>
+</body>
+</html>
