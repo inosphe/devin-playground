@@ -488,6 +488,66 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=中洲屋台街"
   },
   {
+   "id": "p_benjamin",
+   "name": "야키니쿠 벤자민 (니쿠이치 자매점)",
+   "area": "tenjin",
+   "tags": [
+    "맛집",
+    "저녁",
+    "고기"
+   ],
+   "minutes": 90,
+   "open": "17:00",
+   "close": "24:00",
+   "note": "경고 지역. 개인실 있음. TableCheck 온라인 예약 가능 — 10/3 저녁 빈자리 확인됨",
+   "maps": "https://www.google.com/maps/search/?api=1&query=焼肉ベンジャミン+警固"
+  },
+  {
+   "id": "p_nurubon",
+   "name": "하카타 야키니쿠 누루본",
+   "area": "hakata",
+   "tags": [
+    "맛집",
+    "저녁",
+    "고기"
+   ],
+   "minutes": 90,
+   "open": "17:00",
+   "close": "23:30",
+   "note": "하카타역 치쿠시구치 도보 수분. 가성비 흑모와규, 한국식 냉면·김치도 평가 좋음",
+   "maps": "https://www.google.com/maps/search/?api=1&query=博多焼肉+NURUBON"
+  },
+  {
+   "id": "p_haramitasu",
+   "name": "하라미타스 하카타 (와규 개인실)",
+   "area": "hakata",
+   "tags": [
+    "맛집",
+    "저녁",
+    "고기"
+   ],
+   "minutes": 90,
+   "open": "17:00",
+   "close": "24:00",
+   "note": "하카타역 하카타구치 도보 1분 빌딩 6F. 현지인 추천, 개인실에서 와규+돌솥비빔밥",
+   "maps": "https://www.google.com/maps/search/?api=1&query=博多ハラミ+プラス"
+  },
+  {
+   "id": "p_daitoen",
+   "name": "다이토엔 나카스 (노포 야키니쿠)",
+   "area": "nakasu",
+   "tags": [
+    "맛집",
+    "저녁",
+    "고기"
+   ],
+   "minutes": 90,
+   "open": "17:00",
+   "close": "25:00",
+   "note": "1970년 창업 노포. 가미카와바타 — 큐슈 흑모화우, 냉면도 유명",
+   "maps": "https://www.google.com/maps/search/?api=1&query=焼肉+大東園+中洲"
+  },
+  {
    "id": "p_nikuichi",
    "name": "니쿠이치 하카타 야키니쿠",
    "area": "hakata",
