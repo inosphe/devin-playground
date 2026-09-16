@@ -42,6 +42,7 @@
   .fixed-card.mandatory { border-left-color:#c0504d; background:linear-gradient(90deg,#fdf1ef 0,#fff 30%); }
   .slot-card { border-left:4px solid #d9a441; }
   .title-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .title-row .spacer { flex:1; }
   .title { font-weight:600; font-size:14px; }
   .kind { font-size:10px; padding:1px 6px; border-radius:8px; background:#e8ecf3; color:#2e4057; }
   .badge-mand { font-size:10px; padding:1px 6px; border-radius:8px; background:#c0504d; color:#fff; font-weight:700 }
@@ -101,6 +102,34 @@
   .phr .kr { font-size:12px; color:#444 }
   .phr .rom { font-size:11px; color:#999 }
 
+  /* widgets */
+  .panel { background:#fff; border-radius:10px; padding:12px 14px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .panel h3 { margin:0 0 8px; font-size:13px; color:#2e4057; }
+  .progress { height:8px; background:#e8ecf3; border-radius:4px; overflow:hidden; margin:6px 0 }
+  .progress i { display:block; height:100%; background:#4caf50; border-radius:4px; transition:width .3s }
+  .wxrow { display:flex; gap:8px; overflow-x:auto; }
+  .wxday { min-width:86px; border:1px solid #eee; border-radius:8px; padding:6px 8px; font-size:11px; text-align:center; flex-shrink:0 }
+  .wxday .wxi { font-size:20px }
+  .wxday .wxd { color:#888 }
+  .wxday .wxt { font-weight:600 }
+  .vbtn { background:#fff !important; color:#2e4057 !important; border:1px solid #c5ccd6 !important; font-size:11px; padding:2px 7px; border-radius:6px; cursor:pointer }
+  .vbtn.mine { background:#ffe8b0 !important; border-color:#d9a441 !important }
+  .stamp { font-size:10px; padding:2px 7px; border-radius:6px; border:1px solid #4caf50; background:#e9f4e4; color:#2e7d32; cursor:pointer; font-weight:700 }
+  .stamp.off { border-color:#ccc; background:#fff; color:#999; font-weight:400 }
+  .pkrow { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:12px; border-bottom:1px dashed #eee }
+  .pkrow .pn { flex:1; min-width:0 }
+  .pkrow .pn.done { text-decoration:line-through; color:#aaa }
+  .pkrow button { font-size:10px; padding:1px 6px; border:0; border-radius:5px; background:#eee; cursor:pointer; flex-shrink:0 }
+  .pkadd { display:flex; gap:6px; margin-top:8px }
+  .pkadd input { flex:1; font-size:12px; padding:4px 8px; border:1px solid #ddd; border-radius:6px; min-width:0 }
+  .pkadd button { font-size:12px; padding:4px 10px; border:0; border-radius:6px; background:#2e4057; color:#fff; cursor:pointer; flex-shrink:0 }
+  .blimit { display:flex; gap:8px; align-items:center; font-size:12px; flex-wrap:wrap }
+  .blimit input { width:110px; font-size:12px; padding:3px 6px; border:1px solid #ddd; border-radius:6px }
+  .brow { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:12px; border-bottom:1px dashed #eee }
+  .brow .bn { flex:1; min-width:0 }
+  .brow input { width:90px; font-size:12px; padding:2px 6px; border:1px solid #ddd; border-radius:6px; text-align:right }
+  .btotal { font-size:12px; font-weight:700; color:#2e4057; margin-top:6px; display:flex; justify-content:space-between }
+
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#c0504d; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
 
   @media (max-width:600px){
@@ -121,6 +150,7 @@
   </div>
   <span id="conn">연결 중…</span>
   <span id="now"></span>
+  <span id="jst"></span>
   <span id="countdown"></span>
   <div class="prefs" id="prefs"></div>
 </header>
@@ -134,15 +164,36 @@ DATA.TRAVEL.forEach(t=>TRAVEL[t.a+"|"+t.b]=t.m);
 
 const KEY="fukuoka-trip-v2";
 let STATE = JSON.parse(localStorage.getItem(KEY)||"null")
-  || {version:0, prefs:JSON.parse(JSON.stringify(DEFAULT_PREFS)), selections:{}};
+  || {version:0, prefs:JSON.parse(JSON.stringify(DEFAULT_PREFS)), selections:{},
+      votes:{}, budget:{limit:0,items:{}}, packing:[], done:[]};
 if(!STATE.prefs) STATE.prefs = JSON.parse(JSON.stringify(DEFAULT_PREFS));
 document.getElementById("conn").textContent="로컬 저장";
 
 function send(msg){
   if(msg.type==="prefs") STATE.prefs={...STATE.prefs,...msg.data};
-  if(msg.type==="select"){
+  else if(msg.type==="select"){
     if(msg.place_id===null) delete STATE.selections[msg.slot_id];
     else STATE.selections[msg.slot_id]=msg.place_id;
+  }
+  else if(msg.type==="vote"){
+    const k=msg.slot_id+"|"+msg.place_id;
+    const nv=(STATE.votes[k]||0)+msg.delta;
+    if(nv<=0)delete STATE.votes[k];else STATE.votes[k]=nv;
+  }
+  else if(msg.type==="budget"){
+    const d=msg.data;
+    if("limit" in d)STATE.budget.limit=Math.max(0,+d.limit||0);
+    if("items" in d)STATE.budget.items=d.items;
+  }
+  else if(msg.type==="packing"){
+    const d=msg.data;
+    if(d.add&&!STATE.packing.some(p=>p.item===d.add))STATE.packing.push({item:d.add,done:false});
+    if(d.toggle)STATE.packing.forEach(p=>{if(p.item===d.toggle)p.done=!p.done});
+    if(d.remove)STATE.packing=STATE.packing.filter(p=>p.item!==d.remove);
+  }
+  else if(msg.type==="done"){
+    const i=STATE.done.indexOf(msg.key);
+    if(i>=0)STATE.done.splice(i,1);else STATE.done.push(msg.key);
   }
   STATE.version++;
   localStorage.setItem(KEY,JSON.stringify(STATE));
@@ -171,10 +222,102 @@ function urgency(date,start,end){
   return {cls:"urg-future",txt:"D-"+Math.ceil(diffH/24)};
 }
 
+// my votes (per-browser, to allow toggle)
+const MYVOTES_KEY="fukuoka-myvotes";
+const myVotes=new Set(JSON.parse(localStorage.getItem(MYVOTES_KEY)||"[]"));
+function saveMyVotes(){localStorage.setItem(MYVOTES_KEY,JSON.stringify([...myVotes]))}
+function vote(sid,pid){
+  const k=sid+"|"+pid;
+  const mine=myVotes.has(k);
+  send({type:"vote",slot_id:sid,place_id:pid,delta:mine?-1:1});
+  if(mine)myVotes.delete(k);else myVotes.add(k);
+  saveMyVotes();
+}
+function voteCount(sid,pid){return (STATE.votes||{})[sid+"|"+pid]||0}
+function doneToggle(key){send({type:"done",key});}
+function isDone(key){return (STATE.done||[]).includes(key)}
+
+// weather (open-meteo, no key needed)
+const WXICONS={0:"☀️",1:"🌤️",2:"⛅",3:"☁️",45:"🌫️",48:"🌫️",51:"🌦️",53:"🌦️",55:"🌦️",
+  56:"🌨️",57:"🌨️",61:"🌧️",63:"🌧️",65:"🌧️",66:"🌨️",67:"🌨️",71:"🌨️",73:"🌨️",75:"❄️",
+  77:"❄️",80:"🌦️",81:"🌧️",82:"⛈️",85:"🌨️",86:"🌨️",95:"⛈️",96:"⛈️",99:"⛈️"};
+let wxCache=null;
+async function loadWeather(){
+  try{
+    const url="https://api.open-meteo.com/v1/forecast?latitude=33.5904&longitude=130.4017&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max&start_date=2026-10-01&end_date=2026-10-04&timezone=Asia%2FTokyo";
+    const r=await fetch(url);wxCache=(await r.json()).daily;
+    const el=document.getElementById("wxrow");
+    if(el&&wxCache)el.innerHTML=wxCache.time.map((d,i)=>`
+      <div class="wxday"><div class="wxd">${d.slice(5).replace("-","/")}</div>
+      <div class="wxi">${WXICONS[wxCache.weathercode[i]]||"🌡️"}</div>
+      <div class="wxt">${Math.round(wxCache.temperature_2m_max[i])}°/${Math.round(wxCache.temperature_2m_min[i])}°</div>
+      <div>☔${wxCache.precipitation_probability_max[i]??0}%</div></div>`).join("");
+  }catch(e){const el=document.getElementById("wxrow");if(el)el.textContent="예보를 불러오지 못했습니다";}
+}
+function renderWeather(){
+  return `<div class="panel"><h3>후쿠오카 날씨 (10/1–4)</h3><div class="wxrow" id="wxrow">불러오는 중…</div></div>`;
+}
+
+function progressHtml(){
+  const total=FIXED.length+SLOTS.length;
+  const done=(STATE.done||[]).length;
+  const pct=total?Math.round(done/total*100):0;
+  return `<div class="panel"><h3>스탬프 진행률</h3>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    <div style="font-size:12px;color:#555">${done}/${total} 완료 · 각 일정 카드의 스탬프 버튼으로 표시</div></div>`;
+}
+
+function budgetHtml(){
+  const b=STATE.budget||{limit:0,items:{}};
+  const rows=[...FIXED.map(f=>["f:"+f.id,f.title]),
+    ...SLOTS.map(s=>["s:"+s.id,s.label])];
+  const spent=Object.values(b.items||{}).reduce((a,v)=>a+v,0);
+  const pct=b.limit?Math.min(100,Math.round(spent/b.limit*100)):0;
+  return `<div class="panel"><h3>예산 트래커 (엔)</h3>
+    <div class="blimit">총 예산 ¥<input type="number" id="blim" value="${b.limit||""}" placeholder="예: 300000" onchange="send({type:'budget',data:{limit:+this.value}})">
+    <span>사용 ¥${spent.toLocaleString()}</span>${b.limit?`<span>(${pct}%)</span>`:""}</div>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    ${rows.map(([k,label])=>`<div class="brow"><span class="bn">${esc(label)}</span>
+      ¥<input type="number" value="${(b.items||{})[k]??""}" placeholder="0" onchange="budgetItem('${k}',this.value)"></div>`).join("")}
+    <div class="btotal"><span>합계</span><span>¥${spent.toLocaleString()}</span></div></div>`;
+}
+function budgetItem(k,v){
+  const items={...(STATE.budget?STATE.budget.items:{})};
+  const n=parseInt(v)||0;
+  if(n>0)items[k]=n;else delete items[k];
+  send({type:"budget",data:{items}});
+}
+
+const DEFAULT_PACKING=["여권","충전기+케이블","멀티어댑터","SUICA/교통카드","엔화 현금","신용카드(실물)","에어팟","우산","상비약","보조배터리","eSIM/로밍 확인","여행자보험 증권"];
+function packingHtml(){
+  let p=STATE.packing||[];
+  if(!p.length&&!(STATE._packSeeded)){
+    // seed once: only UI hint; actual seeding via send
+    p=[];
+  }
+  const doneN=p.filter(x=>x.done).length;
+  const pct=p.length?Math.round(doneN/p.length*100):0;
+  return `<div class="panel"><h3>짐 체크리스트 (${doneN}/${p.length})</h3>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    ${p.map(x=>`<div class="pkrow"><span class="pn ${x.done?'done':''}">${esc(x.item)}</span>
+      <button onclick="send({type:'packing',data:{toggle:'${esc(x.item).replace(/'/g,"\\'")}'}})">${x.done?'해제':'완료'}</button>
+      <button onclick="send({type:'packing',data:{remove:'${esc(x.item).replace(/'/g,"\\'")}'}})">삭제</button></div>`).join("")}
+    <div class="pkadd"><input id="pknew" placeholder="항목 추가…">
+      <button onclick="packAdd()">추가</button>
+      ${!p.length?'<button onclick="packSeed()">기본목록</button>':""}</div></div>`;
+}
+function packAdd(){const el=document.getElementById("pknew");if(el&&el.value.trim())send({type:"packing",data:{add:el.value.trim()}});}
+function packSeed(){DEFAULT_PACKING.forEach(item=>send({type:"packing",data:{add:item}}));}
+
+function jstNow(){return new Date(new Date().toLocaleString("en-US",{timeZone:"Asia/Tokyo"}))}
+
 function tick(){
   const n=new Date();
+  const j=jstNow();
   document.getElementById("now").textContent =
-    "현재 "+(n.getMonth()+1)+"/"+n.getDate()+" "+fmt(n.getHours())+":"+fmt(n.getMinutes());
+    "로컬 "+(n.getMonth()+1)+"/"+n.getDate()+" "+fmt(n.getHours())+":"+fmt(n.getMinutes());
+  document.getElementById("jst").textContent =
+    "🕐JST "+(j.getMonth()+1)+"/"+j.getDate()+" "+fmt(j.getHours())+":"+fmt(j.getMinutes());
   // countdown: flight f1 + next upcoming event
   const flight=FIXED.find(f=>f.kind==="flight");
   const evts=[...FIXED,...SLOTS].map(e=>({d:e.date+"T"+e.start+":00",t:e.title||e.label}));
@@ -346,7 +489,9 @@ function render(){
           <span class="kind">${f.kind}</span>
           <span class="title">${esc(f.title)}</span>
           ${f.mandatory?'<span class="badge-mand">필수</span>':''}
-          <span class="badge-urg ${u.cls}">${u.txt}</span></div>`;
+          <span class="badge-urg ${u.cls}">${u.txt}</span>
+          <span class="spacer"></span>
+          <span class="stamp ${isDone('f:'+f.id)?'':'off'}" onclick="doneToggle('f:${f.id}')">✓완료</span></div>`;
         if(f.note)h+=`<div class="note">${esc(f.note)}</div>`;
         if(f.platform)h+=`<div class="plat">⏱ ${esc(f.platform)}</div>`;
         if(f.transit)h+=`<div class="transit">→ ${esc(f.transit)}</div>`;
@@ -359,7 +504,9 @@ function render(){
         card.className="card slot-card";
         const chosen=CANDIDATES.find(c=>c.id===STATE.selections[s.id]);
         let inner=`<div class="title-row"><span class="label">${esc(s.label)}</span>
-          <span class="badge-urg ${urgency(s.date,s.start,s.end).cls}">${urgency(s.date,s.start,s.end).txt}</span></div>
+          <span class="badge-urg ${urgency(s.date,s.start,s.end).cls}">${urgency(s.date,s.start,s.end).txt}</span>
+          <span class="spacer"></span>
+          <span class="stamp ${isDone('s:'+s.id)?'':'off'}" onclick="doneToggle('s:${s.id}')">✓완료</span></div>
           <div class="t">거점:${s.anchor}${s.constraints?" · "+esc(s.constraints):""}</div>`;
         const recHtml=(c)=>`
             <div class="rec"><div class="top">
@@ -367,7 +514,7 @@ function render(){
               <span class="name">${esc(c.name)}</span></div>
               <div class="mid">
               <span class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</span>
-              <span class="actions"><a href="${c.maps}" target="_blank">Maps</a>
+              <span class="actions"><button class="vbtn ${myVotes.has(s.id+'|'+c.id)?'mine':''}" onclick="vote('${s.id}','${c.id}')">👍${voteCount(s.id,c.id)||''}</button><a href="${c.maps}" target="_blank">Maps</a>
               <button onclick="pick('${s.id}','${c.id}')">선택</button></span></div>
             </div>`;
         const blockedHtml=(r)=>r.blocked.length?`<div class="blocked">`+r.blocked.map(b=>
@@ -400,8 +547,9 @@ function render(){
     main.appendChild(dd);
   });
   const info=document.createElement("div");
-  info.innerHTML=renderInfo();
+  info.innerHTML=renderWeather()+progressHtml()+budgetHtml()+packingHtml()+renderInfo();
   main.appendChild(info);
+  loadWeather();
 }
 render();
 </script>
