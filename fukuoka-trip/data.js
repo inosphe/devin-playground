@@ -322,6 +322,21 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=元祖博多めんたい重"
   },
   {
+   "id": "p_tachibana",
+   "name": "우동 타치바나 (고보텐 우동)",
+   "area": "nakasu",
+   "tags": [
+    "맛집",
+    "점심",
+    "빠름"
+   ],
+   "minutes": 35,
+   "open": "11:00",
+   "close": "22:00",
+   "note": "가미카와바타마치 입식 우동. 고보텐(우엉튀김)이 명물. 구시다 신사/가와바타 상점가 바로 옆",
+   "maps": "https://www.google.com/maps/search/?api=1&query=うどん+たちばな+上川端"
+  },
+  {
    "id": "p_ooyama",
    "name": "모츠나베 오오야마 카운터KITTE하카타",
    "area": "hakata",
