@@ -7,70 +7,159 @@
 <style>
   * { box-sizing: border-box; font-family: -apple-system, "Pretendard", sans-serif; }
   body { margin: 0; background: #f6f4f0; color: #222; }
-  header { padding: 16px 20px; background: #2e4057; color: #fff; display:flex; align-items:center; gap:14px; flex-wrap:wrap;}
-  header h1 { font-size: 18px; margin: 0; }
+  header { padding: 14px 16px; background: #2e4057; color: #fff; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  header h1 { font-size: 17px; margin: 0; }
   header .sub { font-size: 12px; opacity:.8 }
-  .prefs { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-left:auto; font-size:13px}
-  .prefs label { display:flex; gap:4px; align-items:center; background:#3d5472; padding:4px 8px; border-radius:14px}
-  .prefs input[type=range]{width:70px}
-  main { max-width: 900px; margin: 0 auto; padding: 16px; }
-  .day { margin-bottom: 28px; }
-  .day h2 { font-size: 15px; color:#2e4057; border-bottom: 2px solid #2e4057; padding-bottom:4px;}
-  .fixed, .slot { background:#fff; border-radius:10px; padding:10px 14px; margin:8px 0; box-shadow:0 1px 3px rgba(0,0,0,.08);}
-  .fixed { border-left:4px solid #2e4057; }
-  .fixed .t { font-size:12px; color:#666 }
-  .fixed .title { font-weight:600; }
-  .fixed .note { font-size:12px; color:#777; margin-top:2px}
-  .kind { font-size:11px; padding:1px 6px; border-radius:8px; background:#e8ecf3; color:#2e4057; margin-right:6px}
-  .slot { border-left:4px solid #d9a441; }
+  #conn { font-size:11px; padding:2px 8px; border-radius:8px; background:#555; }
+  #conn.on { background:#4caf50; }
+  #now { font-size:12px; opacity:.9 }
+  .prefs { display:flex; gap:6px; align-items:center; flex-wrap:wrap; font-size:12px; width:100%}
+  .prefs label { display:flex; gap:4px; align-items:center; background:#3d5472; padding:3px 7px; border-radius:12px}
+  .prefs input[type=range]{width:60px}
+  .pace { background:#3d5472; padding:3px 8px; border-radius:12px; cursor:pointer; white-space:nowrap }
+  .dislike-chip { cursor:pointer }
+  .dislike-chip.off { opacity:.45; text-decoration:line-through }
+  main { max-width: 820px; margin: 0 auto; padding: 12px; }
+
+  /* day */
+  .day h2 { font-size:15px; color:#2e4057; border-bottom:2px solid #2e4057; padding-bottom:4px; margin:20px 0 10px;}
+
+  /* timeline */
+  .tl { position:relative; padding-left:64px; }
+  .tl::before { content:""; position:absolute; left:46px; top:0; bottom:0; width:2px; background:#c8d2e0; }
+  .tl-item { position:relative; margin-bottom:10px; }
+  .tl-time { position:absolute; left:-64px; width:56px; text-align:right; font-size:11px; color:#667; top:12px; line-height:1.3;}
+  .tl-item::before { content:""; position:absolute; left:-21px; top:15px; width:10px; height:10px; border-radius:50%; background:#2e4057; border:2px solid #fff; }
+  .tl-item.slot::before { background:#d9a441; }
+  .tl-item.mandatory::before { background:#c0504d; }
+
+  .card { background:#fff; border-radius:10px; padding:10px 12px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .fixed-card { border-left:4px solid #2e4057; }
+  .fixed-card.mandatory { border-left-color:#c0504d; background:linear-gradient(90deg,#fdf1ef 0,#fff 30%); }
+  .slot-card { border-left:4px solid #d9a441; }
+  .title-row { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .title { font-weight:600; font-size:14px; }
+  .kind { font-size:10px; padding:1px 6px; border-radius:8px; background:#e8ecf3; color:#2e4057; }
+  .badge-mand { font-size:10px; padding:1px 6px; border-radius:8px; background:#c0504d; color:#fff; font-weight:700 }
+  .badge-urg { font-size:10px; padding:1px 6px; border-radius:8px; font-weight:700 }
+  .urg-past { background:#ddd; color:#777 }
+  .urg-now { background:#e04338; color:#fff }
+  .urg-soon { background:#ff9800; color:#fff }
+  .urg-future { background:#e8ecf3; color:#2e4057 }
+  .note { font-size:12px; color:#666; margin-top:3px; line-height:1.45 }
+  .plat { font-size:12px; color:#8a4a00; margin-top:3px; }
+  .transit { font-size:12px; color:#3a6ea5; margin-top:2px; }
+  .links { margin-top:4px; display:flex; gap:6px; flex-wrap:wrap }
+  .links a, .rec a { font-size:11px; color:#2e4057; text-decoration:none; border:1px solid #c5ccd6; padding:2px 7px; border-radius:6px}
+  .phone { font-size:12px; color:#666; margin-top:2px }
+
   .slot .label { font-size:13px; font-weight:600; color:#a0720a }
-  .slot .t { font-size:12px; color:#666 }
+  .slot .t { font-size:11px; color:#888 }
   .recs { margin-top:8px; display:grid; gap:6px; }
-  .rec { display:flex; align-items:center; gap:8px; border:1px solid #eee; border-radius:8px; padding:7px 10px; font-size:13px}
+  .rec { border:1px solid #eee; border-radius:8px; padding:7px 10px; font-size:13px; display:flex; flex-direction:column; gap:2px }
+  .rec .top { display:flex; align-items:center; gap:8px; }
   .rec .name { font-weight:600 }
-  .rec .meta { font-size:11px; color:#777 }
+  .rec .meta { font-size:11px; color:#777; line-height:1.4 }
   .rec .spacer{flex:1}
-  .rec button, .chosen button { font-size:11px; padding:3px 9px; border:0; border-radius:6px; cursor:pointer }
+  .rec button, .chosen button { font-size:11px; padding:3px 9px; border:0; border-radius:6px; cursor:pointer; flex-shrink:0 }
   .rec button { background:#2e4057; color:#fff }
-  .rec a { font-size:11px; color:#2e4057; text-decoration:none; border:1px solid #c5ccd6; padding:2px 7px; border-radius:6px}
-  .chosen { background:#e9f4e4; border:1px solid #b7d8a8; border-radius:8px; padding:7px 10px; margin-top:8px; display:flex; gap:8px; align-items:center; font-size:13px}
+  .chosen { background:#e9f4e4; border:1px solid #b7d8a8; border-radius:8px; padding:7px 10px; margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; font-size:13px}
   .chosen .name{font-weight:700}
   .chosen button { background:#c0504d; color:#fff }
   .chosen a { font-size:11px; color:#2e4057; }
   .blocked { margin-top:8px; border-top:1px dashed #ddd; padding-top:6px; font-size:11px; color:#999; }
   .blocked::before { content:"필터링된 후보"; display:block; font-weight:600; color:#aaa; margin-bottom:3px; }
-  .blocked-row { display:flex; justify-content:space-between; padding:1px 0; }
-  .blocked-row .bname { color:#999; }
-  .blocked-row .breason { color:#c0504d; }
-  .dislike-chip { cursor:pointer }
-  .dislike-chip.off { opacity:.45; text-decoration:line-through }
-  .pace { background:#3d5472; padding:4px 8px; border-radius:14px; cursor:pointer }
+  .blocked-row { display:flex; justify-content:space-between; padding:1px 0; gap:8px}
+  .blocked-row .breason { color:#c0504d; white-space:nowrap }
+
+  /* info panel */
+  .info { margin-top:28px; }
+  .info details { background:#fff; border-radius:10px; margin-bottom:8px; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+  .info summary { padding:10px 14px; font-weight:600; font-size:13px; cursor:pointer; color:#2e4057; list-style:none}
+  .info summary::before { content:"▸ "; color:#d9a441 }
+  .info details[open] summary::before { content:"▾ " }
+  .info .body { padding:0 14px 12px; font-size:12px; color:#444 }
+  .info .body ul { margin:0; padding-left:16px; }
+  .info .body li { margin:4px 0; line-height:1.5 }
+  .info .contact { display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #eee }
+  .info .contact .cv { font-weight:600; color:#2e4057; white-space:nowrap }
+  .info .contact .cn { color:#888; font-size:11px }
+
+  #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#c0504d; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
+
+  @media (max-width:600px){
+    .tl { padding-left:46px; }
+    .tl::before { left:34px; }
+    .tl-time { left:-46px; width:40px; font-size:10px; }
+    .tl-item::before { left:-15px; }
+    .title { font-size:13px; }
+    .info .contact { flex-direction:column; gap:0 }
+  }
 </style>
 </head>
 <body>
 <header>
   <div>
     <h1>후쿠오카·유후인 3박4일</h1>
-    <div class="sub">2026.10.1–10.4 · 2명 · 선호 기반 시간대별 추천</div>
+    <div class="sub">2026.10.1–10.4 · 2명 · 실시간 공동 편집</div>
   </div>
+  <span id="conn">연결 중…</span>
+  <span id="now"></span>
   <div class="prefs" id="prefs"></div>
 </header>
 <main id="main">로딩 중…</main>
+<div id="toast"></div>
 <script src="data.js"></script>
 <script>
-const {DAYS, FIXED, SLOTS, CANDIDATES, DEFAULT_PREFS} = DATA;
+const {DAYS, FIXED, SLOTS, CANDIDATES, DEFAULT_PREFS, INFO} = DATA;
 const TRAVEL = {};
 DATA.TRAVEL.forEach(t=>TRAVEL[t.a+"|"+t.b]=t.m);
 
-const LS_PREFS="ftp_prefs", LS_SEL="ftp_selections";
-const loadPrefs=()=>{try{return JSON.parse(localStorage[LS_PREFS])}catch(e){} return JSON.parse(JSON.stringify(DEFAULT_PREFS))};
-const loadSel=()=>{try{return JSON.parse(localStorage[LS_SEL])}catch(e){} return {}};
-const save=()=>{localStorage[LS_PREFS]=JSON.stringify(PREFS);localStorage[LS_SEL]=JSON.stringify(SELECTIONS)};
-let PREFS=loadPrefs(), SELECTIONS=loadSel();
+const KEY="fukuoka-trip-v1";
+let STATE = JSON.parse(localStorage.getItem(KEY)||"null")
+  || {version:0, prefs:JSON.parse(JSON.stringify(DEFAULT_PREFS)), selections:{}};
+if(!STATE.prefs) STATE.prefs = JSON.parse(JSON.stringify(DEFAULT_PREFS));
+document.getElementById("conn").textContent="로컬 저장";
+
+function send(msg){
+  if(msg.type==="prefs") STATE.prefs={...STATE.prefs,...msg.data};
+  if(msg.type==="select"){
+    if(msg.place_id===null) delete STATE.selections[msg.slot_id];
+    else STATE.selections[msg.slot_id]=msg.place_id;
+  }
+  STATE.version++;
+  localStorage.setItem(KEY,JSON.stringify(STATE));
+  render();
+}
+function toast(t){const el=document.getElementById("toast");el.textContent=t;el.style.display="block";setTimeout(()=>el.style.display="none",3000);}
 
 const WEIGHT_KEYS=["맛집","쇼핑","카페","관광","자연","온천"];
 const DISLIKE_OPTS=["곱창","장어","날것"];
 const minutes=t=>{const[h,m]=t.split(":").map(Number);return h*60+m};
+const fmt=h=>String(h).padStart(2,"0");
+
+/* urgency vs current time (trip TZ = JST/KST, machine time assumed local) */
+function urgency(date,start,end){
+  const now=new Date();
+  const evS=new Date(date+"T"+start+":00");
+  let eh=end.split(":")[0]|0, em=end.split(":")[1]|0;
+  let evE=new Date(date+"T"+end+":00");
+  if(eh>=24){evE=new Date(evS);evE.setHours(eh-24+24,em);evE.setDate(evS.getDate()+1)} 
+  if(end>="24:00"||end==="24:00"){evE=new Date(date+"T23:59:59")}
+  if(now>evE) return {cls:"urg-past",txt:"지남"};
+  if(now>=evS) return {cls:"urg-now",txt:"진행중"};
+  const diffH=(evS-now)/36e5;
+  if(diffH<=2) return {cls:"urg-now",txt:"임박!"};
+  if(diffH<=24) return {cls:"urg-soon",txt:"오늘~내일"};
+  return {cls:"urg-future",txt:"D-"+Math.ceil(diffH/24)};
+}
+
+function tick(){
+  const n=new Date();
+  document.getElementById("now").textContent =
+    "현재 "+fmt(n.getHours())+":"+fmt(n.getMinutes());
+}
+setInterval(()=>{tick();render()},60000);
 
 function fits(slot,c){
   const s=minutes(slot.start), e=Math.min(minutes(slot.end),1440);
@@ -78,10 +167,9 @@ function fits(slot,c){
   return Math.min(e,cl)-Math.max(s,o)>=Math.min(c.minutes,30);
 }
 function evaluate(slot,c){
-  // decision-flow filter: returns {ok:true,score} or {ok:false,reason}
-  if(PREFS.dislikes.some(d=>c.tags.includes(d)||c.name===d))
+  if(STATE.prefs.dislikes.some(d=>c.tags.includes(d)||c.name===d))
     return {ok:false,reason:"선호 제외"};
-  if(Object.entries(SELECTIONS).some(([sid,pid])=>pid===c.id&&sid!==slot.id))
+  if(Object.entries(STATE.selections).some(([sid,pid])=>pid===c.id&&sid!==slot.id))
     return {ok:false,reason:"다른 슬롯에 선택됨"};
   const tr=TRAVEL[slot.anchor+"|"+c.area];
   if(tr==null)
@@ -95,9 +183,8 @@ function evaluate(slot,c){
     return {ok:false,reason:"시간 부족(체류 "+c.minutes+"분 필요)"};
   if(!fits(slot,c))
     return {ok:false,reason:"시간대 불일치"};
-  // score
   let sc=0;
-  c.tags.forEach(t=>sc+=PREFS.weights[t]??0.5);
+  c.tags.forEach(t=>sc+=STATE.prefs.weights[t]??0.5);
   const hint=slot.meal_hint;
   if(hint){
     const mm={brunch:["브런치","점심","빠름","맛집"],lunch:["점심","맛집"],dinner:["저녁","맛집"]};
@@ -106,7 +193,7 @@ function evaluate(slot,c){
   sc-=tr/15;
   const span=e-s;
   if(span<=120&&c.tags.includes("빠름"))sc+=1;
-  if(PREFS.pace==="packed")sc+=0.3;
+  if(STATE.prefs.pace==="packed")sc+=0.3;
   return {ok:true,score:+sc.toFixed(2),travel_min:tr};
 }
 function route(slot,n=4){
@@ -124,56 +211,87 @@ function route(slot,n=4){
 const esc=s=>s?String(s).replace(/</g,"&lt;"):"";
 
 function renderPrefs(){
+  const p=STATE.prefs;
   const el=document.getElementById("prefs");el.innerHTML="";
   const pace=document.createElement("span");
-  pace.className="pace";pace.textContent=PREFS.pace==="packed"?"빽빽한 일정":"여유 일정";
-  pace.onclick=()=>{PREFS.pace=PREFS.pace==="packed"?"relaxed":"packed";save();render()};
+  pace.className="pace";pace.textContent=p.pace==="packed"?"빽빽한 일정":"여유 일정";
+  pace.onclick=()=>send({type:"prefs",data:{pace:p.pace==="packed"?"relaxed":"packed"}});
   el.appendChild(pace);
   DISLIKE_OPTS.forEach(d=>{
-    const on=PREFS.dislikes.includes(d);
+    const on=p.dislikes.includes(d);
     const s=document.createElement("span");
     s.className="pace dislike-chip"+(on?"":" off");
     s.textContent=d+(on?" 허용":" 제외");
-    s.onclick=()=>{PREFS.dislikes=on?PREFS.dislikes.filter(x=>x!==d):[...PREFS.dislikes,d];save();render()};
+    s.onclick=()=>send({type:"prefs",data:{dislikes:on?p.dislikes.filter(x=>x!==d):[...p.dislikes,d]}});
     el.appendChild(s);
   });
   WEIGHT_KEYS.forEach(k=>{
     const lab=document.createElement("label");
-    lab.innerHTML=`${k} <input type="range" min="0" max="5" value="${PREFS.weights[k]??0}">`;
-    lab.querySelector("input").onchange=e=>{PREFS.weights[k]=+e.target.value;save();render()};
+    lab.innerHTML=`${k} <input type="range" min="0" max="5" value="${p.weights[k]??0}">`;
+    lab.querySelector("input").onchange=e=>send({type:"prefs",data:{weights:{...p.weights,[k]:+e.target.value}}});
     el.appendChild(lab);
   });
 }
 
-function pick(slotId,placeId){
-  if(placeId==null)delete SELECTIONS[slotId];else SELECTIONS[slotId]=placeId;
-  save();render();
+function pick(slotId,placeId){ send({type:"select",slot_id:slotId,place_id:placeId}); }
+
+function renderInfo(){
+  return `<div class="info">
+    <details open><summary>긴급 연락처</summary><div class="body">${
+      INFO.emergency.map(c=>`<div class="contact"><span class="cv">${esc(c.name)}</span><span class="cv">${esc(c.value)}</span><span class="cn">${esc(c.note)}</span></div>`).join("")
+    }</div></details>
+    <details><summary>택시 호출 방법</summary><div class="body"><ul>${
+      INFO.taxi.map(t=>`<li>${esc(t)}</li>`).join("")
+    }</ul></div></details>
+    <details><summary>여행 팁 · 주의사항</summary><div class="body"><ul>${
+      INFO.tips.map(t=>`<li>${esc(t)}</li>`).join("")
+    }</ul></div></details>
+  </div>`;
 }
 
 function render(){
+  tick();
   renderPrefs();
   const main=document.getElementById("main");main.innerHTML="";
   DAYS.forEach(day=>{
-    const div=document.createElement("div");div.className="day";
-    div.innerHTML=`<h2>${day.label}</h2>`;
+    const dh=document.createElement("h2");dh.textContent=day.label;
+    const dd=document.createElement("div");dd.className="day";
+    dd.appendChild(dh);
+    const tl=document.createElement("div");tl.className="tl";
     const items=[];
     FIXED.filter(f=>f.date===day.date).forEach(f=>items.push({type:"fixed",o:f,t:f.start}));
     SLOTS.filter(s=>s.date===day.date).forEach(s=>items.push({type:"slot",o:s,t:s.start}));
     items.sort((a,b)=>a.t.localeCompare(b.t));
     items.forEach(it=>{
+      const w=document.createElement("div");
+      w.className="tl-item"+(it.type==="slot"?" slot":"")+((it.type==="fixed"&&it.o.mandatory)?" mandatory":"");
+      const timeDiv=document.createElement("div");timeDiv.className="tl-time";
+      timeDiv.innerHTML=it.o.start+"<br>"+it.o.end;
+      w.appendChild(timeDiv);
+      const card=document.createElement("div");
       if(it.type==="fixed"){
         const f=it.o;
-        const e=document.createElement("div");e.className="fixed";
-        e.innerHTML=`<div class="t">${f.start}–${f.end}</div>
-          <div class="title"><span class="kind">${f.kind}</span>${esc(f.title)}</div>
-          <div class="note">${esc(f.note)}</div>`;
-        div.appendChild(e);
+        const u=urgency(f.date,f.start,f.end);
+        card.className="card fixed-card"+(f.mandatory?" mandatory":"");
+        let h=`<div class="title-row">
+          <span class="kind">${f.kind}</span>
+          <span class="title">${esc(f.title)}</span>
+          ${f.mandatory?'<span class="badge-mand">필수</span>':''}
+          <span class="badge-urg ${u.cls}">${u.txt}</span></div>`;
+        if(f.note)h+=`<div class="note">${esc(f.note)}</div>`;
+        if(f.platform)h+=`<div class="plat">⏱ ${esc(f.platform)}</div>`;
+        if(f.transit)h+=`<div class="transit">→ ${esc(f.transit)}</div>`;
+        if(f.phone)h+=`<div class="phone">☎ ${esc(f.phone)}</div>`;
+        if(f.links&&f.links.length)
+          h+=`<div class="links">`+f.links.map(l=>`<a href="${l.url}" target="_blank">${esc(l.label)}</a>`).join("")+`</div>`;
+        card.innerHTML=h;
       }else{
         const s=it.o;
-        const e=document.createElement("div");e.className="slot";
-        const chosen=CANDIDATES.find(c=>c.id===SELECTIONS[s.id]);
-        let inner=`<div class="label">${esc(s.label)}</div>
-          <div class="t">${s.start}–${s.end} · 거점:${s.anchor}${s.constraints?" · "+esc(s.constraints):""}</div>`;
+        card.className="card slot-card";
+        const chosen=CANDIDATES.find(c=>c.id===STATE.selections[s.id]);
+        let inner=`<div class="title-row"><span class="label">${esc(s.label)}</span>
+          <span class="badge-urg ${urgency(s.date,s.start,s.end).cls}">${urgency(s.date,s.start,s.end).txt}</span></div>
+          <div class="t">거점:${s.anchor}${s.constraints?" · "+esc(s.constraints):""}</div>`;
         if(chosen){
           inner+=`<div class="chosen">✔ <span class="name">${esc(chosen.name)}</span>
             <a href="${chosen.maps}" target="_blank">Google Maps</a>
@@ -183,12 +301,12 @@ function render(){
         }else{
           const r=route(s);
           inner+=`<div class="recs">`+ r.top.map(c=>`
-            <div class="rec">
+            <div class="rec"><div class="top">
               <span class="name">${esc(c.name)}</span>
               <a href="${c.maps}" target="_blank">Maps</a>
-              <span class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</span>
               <span class="spacer"></span>
-              <button onclick="pick('${s.id}','${c.id}')">선택</button>
+              <button onclick="pick('${s.id}','${c.id}')">선택</button></div>
+              <div class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</div>
             </div>`).join("")+`</div>`;
           if(r.blocked.length){
             inner+=`<div class="blocked">`+r.blocked.map(b=>
@@ -196,13 +314,19 @@ function render(){
             ).join("")+`</div>`;
           }
         }
-        e.innerHTML=inner;
-        div.appendChild(e);
+        card.innerHTML=inner;
       }
+      w.appendChild(card);
+      tl.appendChild(w);
     });
-    main.appendChild(div);
+    dd.appendChild(tl);
+    main.appendChild(dd);
   });
+  const info=document.createElement("div");
+  info.innerHTML=renderInfo();
+  main.appendChild(info);
 }
+
 render();
 </script>
 </body>
