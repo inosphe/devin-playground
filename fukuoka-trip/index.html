@@ -37,6 +37,11 @@
   .chosen .name{font-weight:700}
   .chosen button { background:#c0504d; color:#fff }
   .chosen a { font-size:11px; color:#2e4057; }
+  .blocked { margin-top:8px; border-top:1px dashed #ddd; padding-top:6px; font-size:11px; color:#999; }
+  .blocked::before { content:"필터링된 후보"; display:block; font-weight:600; color:#aaa; margin-bottom:3px; }
+  .blocked-row { display:flex; justify-content:space-between; padding:1px 0; }
+  .blocked-row .bname { color:#999; }
+  .blocked-row .breason { color:#c0504d; }
   .dislike-chip { cursor:pointer }
   .dislike-chip.off { opacity:.45; text-decoration:line-through }
   .pace { background:#3d5472; padding:4px 8px; border-radius:14px; cursor:pointer }
@@ -72,9 +77,25 @@ function fits(slot,c){
   const o=minutes(c.open), cl=c.close>="24:00"?1440:minutes(c.close);
   return Math.min(e,cl)-Math.max(s,o)>=Math.min(c.minutes,30);
 }
-function score(slot,c){
-  if(PREFS.dislikes.some(d=>c.tags.includes(d)||c.name===d))return null;
-  if(!fits(slot,c))return null;
+function evaluate(slot,c){
+  // decision-flow filter: returns {ok:true,score} or {ok:false,reason}
+  if(PREFS.dislikes.some(d=>c.tags.includes(d)||c.name===d))
+    return {ok:false,reason:"선호 제외"};
+  if(Object.entries(SELECTIONS).some(([sid,pid])=>pid===c.id&&sid!==slot.id))
+    return {ok:false,reason:"다른 슬롯에 선택됨"};
+  const tr=TRAVEL[slot.anchor+"|"+c.area];
+  if(tr==null)
+    return {ok:false,reason:"이동 불가(다른 지역)"};
+  const s=minutes(slot.start), e=Math.min(minutes(slot.end),1440);
+  const o=minutes(c.open), cl=c.close>="24:00"?1440:minutes(c.close);
+  const availStart=Math.max(s,o), availEnd=Math.min(e,cl);
+  if(availEnd-availStart<30)
+    return {ok:false,reason:"영업시간 밖"};
+  if(availEnd-availStart<Math.min(c.minutes,60))
+    return {ok:false,reason:"시간 부족(체류 "+c.minutes+"분 필요)"};
+  if(!fits(slot,c))
+    return {ok:false,reason:"시간대 불일치"};
+  // score
   let sc=0;
   c.tags.forEach(t=>sc+=PREFS.weights[t]??0.5);
   const hint=slot.meal_hint;
@@ -82,19 +103,22 @@ function score(slot,c){
     const mm={brunch:["브런치","점심","빠름","맛집"],lunch:["점심","맛집"],dinner:["저녁","맛집"]};
     sc += c.tags.some(t=>mm[hint].includes(t))?1.5:-1.5;
   }
-  const tr=TRAVEL[slot.anchor+"|"+c.area];
-  if(tr==null)return null;
   sc-=tr/15;
-  const span=Math.min(minutes(slot.end),1440)-minutes(slot.start);
+  const span=e-s;
   if(span<=120&&c.tags.includes("빠름"))sc+=1;
   if(PREFS.pace==="packed")sc+=0.3;
-  return +sc.toFixed(2);
+  return {ok:true,score:+sc.toFixed(2),travel_min:tr};
 }
-function recommend(slot,n=4){
-  return CANDIDATES.map(c=>{
-    const s=score(slot,c);
-    return s==null?null:{...c,score:s,travel_min:TRAVEL[slot.anchor+"|"+c.area]};
-  }).filter(Boolean).sort((a,b)=>b.score-a.score).slice(0,n);
+function route(slot,n=4){
+  const ok=[], blocked=[];
+  CANDIDATES.forEach(c=>{
+    const r=evaluate(slot,c);
+    if(r.ok)ok.push({...c,score:r.score,travel_min:r.travel_min});
+    else blocked.push({...c,reason:r.reason});
+  });
+  ok.sort((a,b)=>b.score-a.score);
+  blocked.sort((a,b)=>a.reason.localeCompare(b.reason));
+  return {top:ok.slice(0,n), blocked};
 }
 
 const esc=s=>s?String(s).replace(/</g,"&lt;"):"";
@@ -109,7 +133,7 @@ function renderPrefs(){
     const on=PREFS.dislikes.includes(d);
     const s=document.createElement("span");
     s.className="pace dislike-chip"+(on?"":" off");
-    s.textContent=d+(on?" 제외":" 허용");
+    s.textContent=d+(on?" 허용":" 제외");
     s.onclick=()=>{PREFS.dislikes=on?PREFS.dislikes.filter(x=>x!==d):[...PREFS.dislikes,d];save();render()};
     el.appendChild(s);
   });
@@ -157,14 +181,20 @@ function render(){
             <span class="spacer"></span>
             <button onclick="pick('${s.id}',null)">해제</button></div>`;
         }else{
-          inner+=`<div class="recs">`+recommend(s).map(r=>`
+          const r=route(s);
+          inner+=`<div class="recs">`+ r.top.map(c=>`
             <div class="rec">
-              <span class="name">${esc(r.name)}</span>
-              <a href="${r.maps}" target="_blank">Maps</a>
-              <span class="meta">${r.minutes}분 · 이동${r.travel_min}분 · ${r.tags.join("/")} · ${esc(r.note)}</span>
+              <span class="name">${esc(c.name)}</span>
+              <a href="${c.maps}" target="_blank">Maps</a>
+              <span class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</span>
               <span class="spacer"></span>
-              <button onclick="pick('${s.id}','${r.id}')">선택</button>
+              <button onclick="pick('${s.id}','${c.id}')">선택</button>
             </div>`).join("")+`</div>`;
+          if(r.blocked.length){
+            inner+=`<div class="blocked">`+r.blocked.map(b=>
+              `<div class="blocked-row"><span class="bname">${esc(b.name)}</span><span class="breason">${b.reason}</span></div>`
+            ).join("")+`</div>`;
+          }
         }
         e.innerHTML=inner;
         div.appendChild(e);
