@@ -393,8 +393,8 @@ const DATA={
    ],
    "minutes": 40,
    "open": "11:00",
-   "close": "03:00",
-   "note": "텐진 인기 라멘",
+   "close": "27:00",
+   "note": "텐진 인기 라멘. 익일 03시까지 영업",
    "maps": "https://www.google.com/maps/search/?api=1&query=ShinShin+天神本店"
   },
   {
