@@ -91,6 +91,7 @@
   .blocked::before { content:"필터링된 후보"; display:block; font-weight:600; color:#aaa; margin-bottom:3px; }
   .blocked-row { display:flex; justify-content:space-between; padding:1px 0; gap:8px; flex-wrap:wrap }
   .blocked-row .bname { min-width:0; overflow-wrap:anywhere }
+  .bhrs { color:#bbb; font-size:10px }
   .blocked-row .breason { color:#c0504d; margin-left:auto; text-align:right }
 
   /* info panel */
@@ -421,6 +422,7 @@ function route(slot,n=4){
 }
 
 const esc=s=>s?String(s).replace(/</g,"&lt;"):"";
+const hrs=c=>{const cl=c.close>"24:00"?"익일 "+fmt(+c.close.split(":")[0]-24)+":"+c.close.split(":")[1]:c.close;return c.open+"~"+cl};
 
 function renderPrefs(){
   const p=STATE.prefs;
@@ -532,12 +534,12 @@ function render(){
               ${c.future===0?'<span class="badge-urg chance urg-now">마지막 기회</span>':`<span class="badge-urg chance urg-future">+${c.future}회</span>`}
               <span class="name">${esc(c.name)}</span></div>
               <div class="mid">
-              <span class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</span>
+              <span class="meta">${hrs(c)} · 체류${c.minutes}분 · 이동${c.travel_min}분 · ${esc(c.note)}</span>
               <span class="actions"><button class="vbtn ${myVotes.has(s.id+'|'+c.id)?'mine':''}" onclick="vote('${s.id}','${c.id}')">👍${voteCount(s.id,c.id)||''}</button><a href="${c.maps}" target="_blank">Maps</a>
               <button onclick="pick('${s.id}','${c.id}')">선택</button></span></div>
             </div>`;
         const blockedHtml=(r)=>r.blocked.length?`<div class="blocked">`+r.blocked.map(b=>
-              `<div class="blocked-row"><span class="bname">${esc(b.name)}</span><span class="breason">${b.reason}</span></div>`
+              `<div class="blocked-row"><span class="bname">${esc(b.name)} <span class="bhrs">${hrs(b)}</span></span><span class="breason">${b.reason}</span></div>`
             ).join("")+`</div>`:'';
         if(chosen.length){
           const r=route(s);
@@ -558,7 +560,7 @@ function render(){
                 <div class="ch-name">✔ ${esc(c.name)}
                   <a href="${c.maps}" target="_blank">Maps</a>
                   <button onclick="pick('${s.id}','${c.id}')">해제</button></div>
-                <div class="ch-meta">${i===0?"거점 "+s.anchor:"이전 장소"} → 이동 ${t}분 · 체류 ${c.minutes}분 · ${esc(c.note)}</div>
+                <div class="ch-meta">${i===0?"거점 "+s.anchor:"이전 장소"} → 이동 ${t}분 · 체류 ${c.minutes}분 · ${hrs(c)} · ${esc(c.note)}</div>
               </div>
             </div>`).join("");
           inner+=`<div class="ch-total ${total>span?"over":""}">
