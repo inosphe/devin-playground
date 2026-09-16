@@ -76,6 +76,15 @@
   .chosen .name{font-weight:700}
   .chosen button { background:#c0504d; color:#fff }
   .chosen a { font-size:11px; color:#2e4057; }
+  .ch-item{display:flex;gap:8px;margin-top:8px;background:#e9f4e4;border:1px solid #b7d8a8;border-radius:8px;padding:7px 10px}
+  .ch-order{font-weight:700;color:#4a7a3a;flex-shrink:0}
+  .ch-body{flex:1;min-width:0}
+  .ch-name{font-weight:700;font-size:13px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+  .ch-name a{font-size:11px;color:#2e4057}
+  .ch-name button{font-size:11px;padding:3px 9px;border:0;border-radius:6px;background:#c0504d;color:#fff;cursor:pointer}
+  .ch-meta{font-size:11px;color:#666;margin-top:3px}
+  .ch-total{margin-top:8px;font-size:12px;font-weight:600;color:#4a7a3a;padding:5px 10px;background:#f2f8ee;border-radius:6px}
+  .ch-total.over{color:#c0504d;background:#fdecea}
   .blocked { margin-top:8px; border-top:1px dashed #ddd; padding-top:6px; font-size:11px; color:#999; }
   .alts { margin-top:8px; }
   .alts summary { font-size:11px; color:#2e4057; cursor:pointer; padding:4px 0; font-weight:600 }
@@ -172,8 +181,15 @@ document.getElementById("conn").textContent="로컬 저장";
 function send(msg){
   if(msg.type==="prefs") STATE.prefs={...STATE.prefs,...msg.data};
   else if(msg.type==="select"){
+    let cur=STATE.selections[msg.slot_id];
+    if(!Array.isArray(cur))cur=cur?[cur]:[];
     if(msg.place_id===null) delete STATE.selections[msg.slot_id];
-    else STATE.selections[msg.slot_id]=msg.place_id;
+    else{
+      const i=cur.indexOf(msg.place_id);
+      if(i>=0)cur.splice(i,1);
+      else cur.push(msg.place_id);
+      if(cur.length)STATE.selections[msg.slot_id]=cur;else delete STATE.selections[msg.slot_id];
+    }
   }
   else if(msg.type==="vote"){
     const k=msg.slot_id+"|"+msg.place_id;
@@ -352,7 +368,7 @@ function evaluate(slot,c,ignoreSel){
   const catTags=c.tags.filter(t=>WEIGHT_KEYS.includes(t));
   if(catTags.length&&catTags.every(t=>(STATE.prefs.weights[t]??0)===0))
     return {ok:false,reason:"카테고리 제외("+catTags.join("/")+")"};
-  const selSlot=Object.entries(STATE.selections).find(([sid,pid])=>pid===c.id&&sid!==slot.id);
+  const selSlot=Object.entries(STATE.selections).find(([sid,ids])=>(ids||[]).includes(c.id)&&sid!==slot.id);
   if(!ignoreSel&&selSlot){
     const sl=SLOTS.find(x=>x.id===selSlot[0]);
     return {ok:false,reason:"선택됨: "+(sl?sl.label:selSlot[0])};
@@ -389,7 +405,9 @@ function futureChances(slot,c){
 }
 function route(slot,n=4){
   const ok=[], blocked=[];
+  const chosenIds=STATE.selections[slot.id]||[];
   CANDIDATES.forEach(c=>{
+    if(chosenIds.includes(c.id))return;
     const r=evaluate(slot,c);
     if(r.ok){
       const future=futureChances(slot,c);
@@ -502,7 +520,8 @@ function render(){
       }else{
         const s=it.o;
         card.className="card slot-card";
-        const chosen=CANDIDATES.find(c=>c.id===STATE.selections[s.id]);
+        const chosenIds=STATE.selections[s.id]||[];
+        const chosen=chosenIds.map(pid=>CANDIDATES.find(c=>c.id===pid)).filter(Boolean);
         let inner=`<div class="title-row"><span class="label">${esc(s.label)}</span>
           <span class="badge-urg ${urgency(s.date,s.start,s.end).cls}">${urgency(s.date,s.start,s.end).txt}</span>
           <span class="spacer"></span>
@@ -520,16 +539,32 @@ function render(){
         const blockedHtml=(r)=>r.blocked.length?`<div class="blocked">`+r.blocked.map(b=>
               `<div class="blocked-row"><span class="bname">${esc(b.name)}</span><span class="breason">${b.reason}</span></div>`
             ).join("")+`</div>`:'';
-        if(chosen){
+        if(chosen.length){
           const r=route(s);
-          const rest=[...r.top,...r.rest].filter(c=>c.id!==chosen.id);
-          inner+=`<div class="chosen">✔ <span class="name">${esc(chosen.name)}</span>
-            <a href="${chosen.maps}" target="_blank">Google Maps</a>
-            <span class="meta">${esc(chosen.note)}</span>
-            <span class="spacer"></span>
-            <button onclick="pick('${s.id}',null)">해제</button></div>`;
+          const rest=[...r.top,...r.rest];
+          let prev=s.anchor, total=0;
+          const chain=chosen.map(c=>{
+            const t=TRAVEL[prev+"|"+c.area]??TRAVEL[c.area+"|"+prev]??15;
+            const leg={c,t};
+            total+=t+c.minutes; prev=c.area;
+            return leg;
+          });
+          const span=Math.min(minutes(s.end),1440)-minutes(s.start);
+          const hhmm=m=>m>=60?(Math.floor(m/60)+"시간"+(m%60?" "+m%60+"분":"")):(m+"분");
+          inner+=chain.map(({c,t},i)=>`
+            <div class="ch-item">
+              <div class="ch-order">${i+1}.</div>
+              <div class="ch-body">
+                <div class="ch-name">✔ ${esc(c.name)}
+                  <a href="${c.maps}" target="_blank">Maps</a>
+                  <button onclick="pick('${s.id}','${c.id}')">해제</button></div>
+                <div class="ch-meta">${i===0?"거점 "+s.anchor:"이전 장소"} → 이동 ${t}분 · 체류 ${c.minutes}분 · ${esc(c.note)}</div>
+              </div>
+            </div>`).join("");
+          inner+=`<div class="ch-total ${total>span?"over":""}">
+            예상 소요 ${hhmm(total)} / 슬롯 ${hhmm(span)}${total>span?` — ⚠ ${hhmm(total-span)} 초과 (추가는 가능)`:""}</div>`;
           if(rest.length){
-            inner+=`<details class="alts"><summary>다른 후보 ${rest.length}개 보기</summary>
+            inner+=`<details class="alts"><summary>추가 후보 ${rest.length}개 보기</summary>
               <div class="recs">`+rest.map(recHtml).join("")+`</div></details>`;
           }
           inner+=blockedHtml(r);
