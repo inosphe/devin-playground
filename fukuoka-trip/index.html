@@ -412,13 +412,20 @@ function route(slot,n=4){
     const r=evaluate(slot,c);
     if(r.ok){
       const future=futureChances(slot,c);
-      ok.push({...c,score:r.score+(future===0?1.2:0)-(future*0.1),travel_min:r.travel_min,future});
+      const votes=STATE.votes[slot.id+"|"+c.id]||0;
+      ok.push({...c,score:r.score+(future===0?1.2:0)-(future*0.1)+votes*0.8,travel_min:r.travel_min,future});
     }
     else blocked.push({...c,reason:r.reason});
   });
   ok.sort((a,b)=>b.score-a.score);
   blocked.sort((a,b)=>a.reason.localeCompare(b.reason));
-  return {top:ok.slice(0,n), rest:ok.slice(n), blocked};
+  // voted candidates are always visible regardless of rank
+  const voted=ok.filter(c=>(STATE.votes[slot.id+"|"+c.id]||0)>0);
+  const rest=ok.filter(c=>!(STATE.votes[slot.id+"|"+c.id]>0));
+  const top=rest.slice(0,n);
+  voted.forEach(c=>{if(!top.includes(c))top.push(c)});
+  top.sort((a,b)=>b.score-a.score);
+  return {top, rest:rest.slice(n), blocked};
 }
 
 const esc=s=>s?String(s).replace(/</g,"&lt;"):"";
