@@ -278,6 +278,50 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=やまや+博多店"
   },
   {
+   "id": "p_shoboan",
+   "name": "하카타 쇼보안 (멘타이 마부시)",
+   "area": "hakata",
+   "tags": [
+    "맛집",
+    "점심",
+    "저녁"
+   ],
+   "minutes": 50,
+   "open": "11:00",
+   "close": "23:00",
+   "note": "아뮤플라자 하카타 9층. 명란 마부시가 대표메뉴",
+   "maps": "https://www.google.com/maps/search/?api=1&query=博多しょうぶあん+アミュプラザ博多"
+  },
+  {
+   "id": "p_fukuya",
+   "name": "후쿠야 하카타 에키마에 (명란 전문)",
+   "area": "hakata",
+   "tags": [
+    "맛집",
+    "점심",
+    "쇼핑"
+   ],
+   "minutes": 40,
+   "open": "09:00",
+   "close": "18:00",
+   "note": "하카타 명란 노포. 명란 요리 점심 + 기념품 매장",
+   "maps": "https://www.google.com/maps/search/?api=1&query=ふくや+博多駅前"
+  },
+  {
+   "id": "p_mentaiju",
+   "name": "원조 하카타 멘타이쥬",
+   "area": "tenjin",
+   "tags": [
+    "맛집",
+    "점심"
+   ],
+   "minutes": 45,
+   "open": "07:30",
+   "close": "22:30",
+   "note": "명란젓 전문점이 만드는 멘타이중(명란 덮밥). 텐진 서쪽",
+   "maps": "https://www.google.com/maps/search/?api=1&query=元祖博多めんたい重"
+  },
+  {
    "id": "p_ooyama",
    "name": "모츠나베 오오야마 카운터KITTE하카타",
    "area": "hakata",
