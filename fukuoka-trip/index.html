@@ -139,6 +139,19 @@
   .brow .bn { flex:1; min-width:0 }
   .brow input { width:90px; font-size:12px; padding:2px 6px; border:1px solid #ddd; border-radius:6px; text-align:right }
   .btotal { font-size:12px; font-weight:700; color:#2e4057; margin-top:6px; display:flex; justify-content:space-between }
+  .bcard { border-bottom:1px dashed #eee; padding:4px 0 }
+  .bhead { display:flex; align-items:center; gap:6px; font-size:12px }
+  .bhead .bn { flex:1; min-width:0; font-weight:600; overflow-wrap:anywhere }
+  .bsub { color:#888; font-size:11px }
+  .badd { font-size:13px; padding:1px 8px; border:0; border-radius:6px; background:#2e4057; color:#fff; cursor:pointer; flex-shrink:0 }
+  .bent { display:flex; align-items:center; gap:6px; font-size:11px; padding:2px 0 2px 10px; color:#555 }
+  .bent .bnote { flex:1; min-width:0; overflow-wrap:anywhere }
+  .bent .bamt { color:#2e4057; font-weight:600 }
+  .bdel { font-size:10px; padding:1px 5px; border:0; border-radius:4px; background:#eee; color:#999; cursor:pointer }
+  .bform { display:flex; gap:6px; margin-top:4px; padding-left:10px }
+  .bform input[type=text] { flex:1; min-width:0; font-size:11px; padding:3px 6px; border:1px solid #ddd; border-radius:6px }
+  .bform input[type=number] { width:80px; font-size:11px; padding:3px 6px; border:1px solid #ddd; border-radius:6px; text-align:right }
+  .bform button { font-size:11px; padding:3px 9px; border:0; border-radius:6px; background:#4a7a3a; color:#fff; cursor:pointer }
 
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#c0504d; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
 
@@ -285,24 +298,54 @@ function progressHtml(){
     <div style="font-size:12px;color:#555">${done}/${total} 완료 · 각 일정 카드의 스탬프 버튼으로 표시</div></div>`;
 }
 
+function budgetItems(){ // normalize: {key:[{note,amount}]}
+  const raw=(STATE.budget&&STATE.budget.items)||{}, out={};
+  for(const[k,v]of Object.entries(raw))
+    out[k]=Array.isArray(v)?v:(v?[{note:"",amount:+v||0}]:[]);
+  return out;
+}
 function budgetHtml(){
   const b=STATE.budget||{limit:0,items:{}};
+  const items=budgetItems();
   const rows=[...FIXED.map(f=>["f:"+f.id,f.title]),
-    ...SLOTS.map(s=>["s:"+s.id,s.label])];
-  const spent=Object.values(b.items||{}).reduce((a,v)=>a+v,0);
+    ...SLOTS.map(s=>["s:"+s.id,s.label]),
+    ["etc","기타 (카드에 없는 지출)"]];
+  const cardSum=k=>(items[k]||[]).reduce((a,e)=>a+e.amount,0);
+  const spent=Object.keys(items).reduce((a,k)=>a+cardSum(k),0);
   const pct=b.limit?Math.min(100,Math.round(spent/b.limit*100)):0;
-  return `<div class="panel"><h3>예산 트래커 (엔)</h3>
+  const entryList=k=>(items[k]||[]).map((e,i)=>`
+    <div class="bent"><span class="bnote">${esc(e.note)||"·"}</span>
+      <span class="bamt">¥${e.amount.toLocaleString()}</span>
+      <button class="bdel" onclick="budgetDel('${k}',${i})">✕</button></div>`).join("");
+  return `<div class="panel"><h3>가계부 (엔)</h3>
     <div class="blimit">총 예산 ¥<input type="number" id="blim" value="${b.limit||""}" placeholder="예: 300000" onchange="send({type:'budget',data:{limit:+this.value}})">
     <span>사용 ¥${spent.toLocaleString()}</span>${b.limit?`<span>(${pct}%)</span>`:""}</div>
     <div class="progress"><i style="width:${pct}%"></i></div>
-    ${rows.map(([k,label])=>`<div class="brow"><span class="bn">${esc(label)}</span>
-      ¥<input type="number" value="${(b.items||{})[k]??""}" placeholder="0" onchange="budgetItem('${k}',this.value)"></div>`).join("")}
+    ${rows.map(([k,label])=>`<div class="bcard">
+      <div class="bhead"><span class="bn">${esc(label)}</span>
+        <span class="bsub">${cardSum(k)?"¥"+cardSum(k).toLocaleString():""}</span>
+        <button class="badd" onclick="budgetAdd('${k}')">＋</button></div>
+      ${entryList(k)}
+      <div class="bform" id="bf_${k}" style="display:none">
+        <input type="text" id="bn_${k}" placeholder="내용 (예: 라멘 2그릇)">
+        <input type="number" id="ba_${k}" placeholder="금액">
+        <button onclick="budgetSave('${k}')">저장</button></div>
+    </div>`).join("")}
     <div class="btotal"><span>합계</span><span>¥${spent.toLocaleString()}</span></div></div>`;
 }
-function budgetItem(k,v){
-  const items={...(STATE.budget?STATE.budget.items:{})};
-  const n=parseInt(v)||0;
-  if(n>0)items[k]=n;else delete items[k];
+function budgetAdd(k){const el=document.getElementById("bf_"+k);el.style.display=el.style.display==="none"?"flex":"none";}
+function budgetSave(k){
+  const note=document.getElementById("bn_"+k).value.trim();
+  const amount=parseInt(document.getElementById("ba_"+k).value)||0;
+  if(!amount)return;
+  const items=budgetItems();
+  (items[k]=items[k]||[]).push({note,amount});
+  send({type:"budget",data:{items}});
+}
+function budgetDel(k,i){
+  const items=budgetItems();
+  (items[k]||[]).splice(i,1);
+  if(!items[k].length)delete items[k];
   send({type:"budget",data:{items}});
 }
 
