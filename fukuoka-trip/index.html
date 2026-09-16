@@ -6,6 +6,7 @@
 <title>후쿠오카·유후인 일정 라우터</title>
 <style>
   * { box-sizing: border-box; font-family: -apple-system, "Pretendard", sans-serif; }
+  html, body { overflow-x: hidden; }
   body { margin: 0; background: #f6f4f0; color: #222; }
   header { padding: 14px 16px; background: #2e4057; color: #fff; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   header h1 { font-size: 17px; margin: 0; }
@@ -46,7 +47,7 @@
   .badge-mand { font-size:10px; padding:1px 6px; border-radius:8px; background:#c0504d; color:#fff; font-weight:700 }
   .badge-urg { font-size:10px; padding:1px 6px; border-radius:8px; font-weight:700; white-space:nowrap; }
   .chance { width:64px; text-align:center; flex-shrink:0; }
-  .rec .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rec .name { min-width:0; overflow-wrap:anywhere; }
   .urg-past { background:#ddd; color:#777 }
   .urg-now { background:#e04338; color:#fff }
   .urg-soon { background:#ff9800; color:#fff }
@@ -61,10 +62,12 @@
   .slot .label { font-size:13px; font-weight:600; color:#a0720a }
   .slot .t { font-size:11px; color:#888 }
   .recs { margin-top:8px; display:grid; gap:6px; }
-  .rec { border:1px solid #eee; border-radius:8px; padding:7px 10px; font-size:13px; display:flex; flex-direction:column; gap:2px }
-  .rec .top { display:flex; align-items:center; gap:8px; }
+  .rec { border:1px solid #eee; border-radius:8px; padding:7px 10px; font-size:13px; display:flex; flex-direction:column; gap:2px; overflow:hidden }
+  .rec .top { display:flex; align-items:flex-start; gap:8px; }
+  .rec .mid { display:flex; align-items:center; gap:8px; }
+  .rec .actions { display:flex; gap:6px; margin-left:auto; align-items:center; flex-shrink:0; }
   .rec .name { font-weight:600 }
-  .rec .meta { font-size:11px; color:#777; line-height:1.4 }
+  .rec .meta { font-size:11px; color:#777; line-height:1.4; flex:1; min-width:0; }
   .rec .spacer{flex:1}
   .rec button, .chosen button { font-size:11px; padding:3px 9px; border:0; border-radius:6px; cursor:pointer; flex-shrink:0 }
   .rec button { background:#2e4057; color:#fff }
@@ -76,8 +79,9 @@
   .alts { margin-top:8px; }
   .alts summary { font-size:11px; color:#2e4057; cursor:pointer; padding:4px 0; font-weight:600 }
   .blocked::before { content:"필터링된 후보"; display:block; font-weight:600; color:#aaa; margin-bottom:3px; }
-  .blocked-row { display:flex; justify-content:space-between; padding:1px 0; gap:8px}
-  .blocked-row .breason { color:#c0504d; white-space:nowrap }
+  .blocked-row { display:flex; justify-content:space-between; padding:1px 0; gap:8px; flex-wrap:wrap }
+  .blocked-row .bname { min-width:0; overflow-wrap:anywhere }
+  .blocked-row .breason { color:#c0504d; margin-left:auto; text-align:right }
 
   /* info panel */
   .info { margin-top:28px; }
@@ -344,11 +348,11 @@ function render(){
         const recHtml=(c)=>`
             <div class="rec"><div class="top">
               ${c.future===0?'<span class="badge-urg chance urg-now">마지막 기회</span>':`<span class="badge-urg chance urg-future">+${c.future}회</span>`}
-              <span class="name">${esc(c.name)}</span>
-              <span class="spacer"></span>
-              <a href="${c.maps}" target="_blank">Maps</a>
-              <button onclick="pick('${s.id}','${c.id}')">선택</button></div>
-              <div class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</div>
+              <span class="name">${esc(c.name)}</span></div>
+              <div class="mid">
+              <span class="meta">${c.minutes}분 · 이동${c.travel_min}분 · ${c.tags.join("/")} · ${esc(c.note)}</span>
+              <span class="actions"><a href="${c.maps}" target="_blank">Maps</a>
+              <button onclick="pick('${s.id}','${c.id}')">선택</button></span></div>
             </div>`;
         const blockedHtml=(r)=>r.blocked.length?`<div class="blocked">`+r.blocked.map(b=>
               `<div class="blocked-row"><span class="bname">${esc(b.name)}</span><span class="breason">${b.reason}</span></div>`
