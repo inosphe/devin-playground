@@ -1,5 +1,5 @@
 const DATA={
- "days": [
+ "DAYS": [
   {
    "date": "2026-10-01",
    "label": "10/1 (목) 하카타"
@@ -17,7 +17,7 @@ const DATA={
    "label": "10/4 (일) 하카타·귀국"
   }
  ],
- "fixed": [
+ "FIXED": [
   {
    "id": "f1",
    "date": "2026-10-01",
@@ -166,7 +166,7 @@ const DATA={
    ]
   }
  ],
- "slots": [
+ "SLOTS": [
   {
    "id": "s1",
    "date": "2026-10-01",
@@ -230,7 +230,7 @@ const DATA={
    "meal_hint": "lunch"
   }
  ],
- "candidates": [
+ "CANDIDATES": [
   {
    "id": "p_ebisuya",
    "name": "에비스야 우동 하카타스미요시",
@@ -819,7 +819,7 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=博多駅"
   }
  ],
- "travel": [
+ "TRAVEL": [
   {
    "a": "hakata",
    "b": "hakata",
@@ -916,7 +916,7 @@ const DATA={
    "m": 15
   }
  ],
- "prefs": {
+ "DEFAULT_PREFS": {
   "dislikes": [
    "곱창"
   ],
@@ -930,7 +930,7 @@ const DATA={
   },
   "pace": "relaxed"
  },
- "info": {
+ "INFO": {
   "emergency": [
    {
     "name": "나나카와 료칸",
