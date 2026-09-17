@@ -578,6 +578,21 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=焼肉きんぐ+天神"
   },
   {
+   "id": "p_kamakiri",
+   "name": "카마키리 우동 아카사카",
+   "area": "tenjin",
+   "tags": [
+    "맛집",
+    "우동",
+    "점심"
+   ],
+   "minutes": 45,
+   "open": "11:30",
+   "close": "21:00",
+   "note": "타베로그 유명 우동. 일요일·공휴일 휴업. 아카사카(텐진 남쪽)",
+   "maps": "https://s.tabelog.com/kr/fukuoka/A4001/A400104/40034851/"
+  },
+  {
    "id": "p_hachibei",
    "name": "야키토리노 하치베이 벳칸",
    "area": "hakata",

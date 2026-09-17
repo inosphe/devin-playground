@@ -191,6 +191,7 @@
   .bud .bform { padding-left:0; margin-top:3px }
   .slot-bud { margin-top:6px; border-top:1px solid #f0f0f0; padding-top:4px }
   .btag { font-size:10px; color:#999 }
+  .cusbadge { font-size:9px; padding:0 4px; border-radius:6px; background:#7a4a9e; color:#fff; margin-left:4px; vertical-align:1px }
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#c0504d; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
 
   @media (max-width:600px){
@@ -641,7 +642,7 @@ function placeModalHtml(){
   return `<div class="pmodal" id="pmodal" style="display:none" onclick="if(event.target===this)closePlaceModal()">
     <div class="pbox">
       <div class="ptitle">장소 추가</div>
-      <label>구글맵 URL 붙여넣기<input id="pl_url" placeholder="https://www.google.com/maps/place/..." oninput="parseMapsUrl()"></label>
+      <label>링크 붙여넣기 (구글맵/타베로그 등)<input id="pl_url" placeholder="https://www.google.com/maps/... 또는 tabelog.com/..." oninput="parseMapsUrl()"></label>
       <label>이름<input id="pl_name" placeholder="예: 야키토리노 하치베이"></label>
       <div class="prow">
         <label>지역(이동시간 기준)<select id="pl_area">${AREAS.map(a=>`<option>${a}</option>`).join("")}</select></label>
@@ -663,7 +664,11 @@ function closePlaceModal(){document.getElementById("pmodal").style.display="none
 function parseMapsUrl(){
   const u=document.getElementById("pl_url").value.trim();
   const m=u.match(/\/place\/([^/@?]+)/);
-  if(m)document.getElementById("pl_name").value=decodeURIComponent(m[1]).replace(/\+/g," ");
+  if(m){document.getElementById("pl_name").value=decodeURIComponent(m[1]).replace(/\+/g," ");return;}
+  if(u.startsWith("http")&&!u.includes("google.com/maps"))
+    fetch("/api/lookup?url="+encodeURIComponent(u)).then(r=>r.json()).then(d=>{
+      if(d.name&&!document.getElementById("pl_name").value)document.getElementById("pl_name").value=d.name;
+    }).catch(()=>{});
 }
 function addPlace(){
   const name=document.getElementById("pl_name").value.trim();
@@ -761,7 +766,7 @@ function render(){
         const recHtml=(c)=>`
             <div class="rec"><div class="top">
               ${c.future===0?'<span class="badge-urg chance urg-now">마지막 기회</span>':`<span class="badge-urg chance urg-future">+${c.future}회</span>`}
-              <span class="name">${esc(c.name)}</span></div>
+              <span class="name">${esc(c.name)}${c.custom?'<span class="cusbadge">직접추가</span>':''}</span></div>
               <div class="mid">
               <span class="meta">${hrs(c)} · 체류${c.minutes}분 · 이동${c.travel_min}분 · ${esc(c.note)}</span>
               <span class="actions"><button class="vbtn ${myVotes.has(s.id+'|'+c.id)?'mine':''}" onclick="vote('${s.id}','${c.id}')">👍${voteCount(s.id,c.id)||''}</button><a href="${c.maps}" target="_blank">Maps</a>
@@ -786,7 +791,7 @@ function render(){
             <div class="ch-item">
               <div class="ch-order">${i+1}.</div>
               <div class="ch-body">
-                <div class="ch-name">✔ ${esc(c.name)}
+                <div class="ch-name">✔ ${esc(c.name)}${c.custom?'<span class="cusbadge">직접추가</span>':''}
                   <a href="${c.maps}" target="_blank">Maps</a>
                   <button onclick="pick('${s.id}','${c.id}')">해제</button></div>
                 <div class="ch-meta">${i===0?"거점 "+s.anchor:"이전 장소"} → 이동 ${t}분 · 체류 ${c.minutes}분 · ${hrs(c)} · ${esc(c.note)}</div>
