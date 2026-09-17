@@ -167,6 +167,13 @@
   .cmrow .cmname { flex:1; min-width:0 }
   .cmrow .cmmeta { color:#888; font-size:11px }
   .pdel { font-size:10px; padding:2px 6px; border:0; border-radius:4px; background:#eee; color:#999; cursor:pointer }
+  .bud { margin-top:5px; padding:5px 7px; background:#f8f6f0; border:1px dashed #ddd; border-radius:6px }
+  .budh { font-size:11px; font-weight:600; color:#666; display:flex; align-items:center; gap:6px }
+  .budh .badd { font-size:11px; padding:0 6px }
+  .bud .bent { padding-left:4px }
+  .bud .bform { padding-left:0; margin-top:3px }
+  .slot-bud { margin-top:6px; border-top:1px solid #f0f0f0; padding-top:4px }
+  .btag { font-size:10px; color:#999 }
   #toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#c0504d; color:#fff; padding:8px 16px; border-radius:8px; font-size:13px; display:none; }
 
   @media (max-width:600px){
@@ -339,6 +346,21 @@ function budgetItems(){ // normalize: {key:[{note,amount}]}
     out[k]=Array.isArray(v)?v:(v?[{note:"",amount:+v||0}]:[]);
   return out;
 }
+function budInline(k){ // per-card inline spend editor
+  const es=(budgetItems()[k]||[]);
+  const sum=es.reduce((a,e)=>a+e.amount,0);
+  return `<div class="bud">
+    <div class="budh">지출 ${sum?`¥${sum.toLocaleString()}`:""}
+      <button class="badd" onclick="budgetAdd('${k}')">＋</button></div>
+    ${es.map((e,i)=>`<div class="bent"><span class="bnote">${esc(e.note)||"·"}</span>
+      <span class="bamt">¥${e.amount.toLocaleString()}</span>
+      <button class="bdel" onclick="budgetDel('${k}',${i})">✕</button></div>`).join("")}
+    <div class="bform" id="bf_${k}" style="display:none">
+      <input type="text" id="bn_${k}" placeholder="내용">
+      <input type="number" id="ba_${k}" placeholder="금액">
+      <button onclick="budgetSave('${k}')">저장</button></div>
+  </div>`;
+}
 function budgetHtml(){
   const b=STATE.budget||{limit:0,items:{}};
   const items=budgetItems();
@@ -356,8 +378,8 @@ function budgetHtml(){
     <div class="blimit">총 예산 ¥<input type="number" id="blim" value="${b.limit||""}" placeholder="예: 300000" onchange="send({type:'budget',data:{limit:+this.value}})">
     <span>사용 ¥${spent.toLocaleString()}</span>${b.limit?`<span>(${pct}%)</span>`:""}</div>
     <div class="progress"><i style="width:${pct}%"></i></div>
-    ${rows.map(([k,label])=>`<div class="bcard">
-      <div class="bhead"><span class="bn">${esc(label)}</span>
+    ${["etc"].map(k=>`<div class="bcard">
+      <div class="bhead"><span class="bn">기타 (카드에 없는 지출)</span>
         <span class="bsub">${cardSum(k)?"¥"+cardSum(k).toLocaleString():""}</span>
         <button class="badd" onclick="budgetAdd('${k}')">＋</button></div>
       ${entryList(k)}
@@ -366,6 +388,7 @@ function budgetHtml(){
         <input type="number" id="ba_${k}" placeholder="금액">
         <button onclick="budgetSave('${k}')">저장</button></div>
     </div>`).join("")}
+    ${spent-cardSum("etc")?`<div style="font-size:11px;color:#888;margin-top:4px">카드별 지출은 각 일정 카드에서 입력됩니다 — 카드 소계 ¥${(spent-cardSum("etc")).toLocaleString()}</div>`:""}
     <div class="btotal"><span>합계</span><span>¥${spent.toLocaleString()}</span></div></div>`;
 }
 function budgetAdd(k){const el=document.getElementById("bf_"+k);el.style.display=el.style.display==="none"?"flex":"none";}
@@ -656,6 +679,7 @@ function render(){
         if(f.phone)h+=`<div class="phone">☎ ${esc(f.phone)}</div>`;
         if(f.links&&f.links.length)
           h+=`<div class="links">`+f.links.map(l=>`<a href="${l.url}" target="_blank">${esc(l.label)}</a>`).join("")+`</div>`;
+        h+=budInline("f:"+f.id);
         card.innerHTML=h;
       }else{
         const s=it.o;
@@ -699,6 +723,7 @@ function render(){
                   <a href="${c.maps}" target="_blank">Maps</a>
                   <button onclick="pick('${s.id}','${c.id}')">해제</button></div>
                 <div class="ch-meta">${i===0?"거점 "+s.anchor:"이전 장소"} → 이동 ${t}분 · 체류 ${c.minutes}분 · ${hrs(c)} · ${esc(c.note)}</div>
+                ${budInline("p:"+c.id)}
               </div>
             </div>`).join("");
           inner+=`<div class="ch-total ${total>span?"over":""}">
@@ -708,6 +733,7 @@ function render(){
               <div class="recs">`+rest.map(recHtml).join("")+`</div></details>`;
           }
           inner+=blockedHtml(r);
+          inner+=`<div class="slot-bud"><span class="btag">구간 기타 지출</span>${budInline("s:"+s.id)}</div>`;
         }else{
           const r=route(s);
           inner+=`<div class="recs">`+ r.top.map(recHtml).join("")+`</div>`;
@@ -716,6 +742,7 @@ function render(){
               <div class="recs">`+r.rest.map(recHtml).join("")+`</div></details>`;
           }
           inner+=blockedHtml(r);
+          inner+=`<div class="slot-bud"><span class="btag">구간 기타 지출</span>${budInline("s:"+s.id)}</div>`;
         }
         card.innerHTML=inner;
       }
