@@ -4,10 +4,27 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>후쿠오카·유후인 일정 라우터</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   * { box-sizing: border-box; font-family: -apple-system, "Pretendard", sans-serif; }
   html, body { overflow-x: hidden; }
-  body { margin: 0; background: #f6f4f0; color: #222; }
+  body { margin: 0; background: #f6f4f0; color: #222; display:flex; flex-direction:column; height:100vh; overflow:hidden }
+  header { flex:none }
+  #app { flex:1; display:flex; min-height:0 }
+  main { flex:1; overflow-y:auto; max-width:none !important; margin:0 !important }
+  #mapPane { flex:1; min-width:0; position:relative }
+  #map { position:absolute; inset:0 }
+  .mnumw { background:none; border:none }
+  .mnum { color:#fff; font-size:11px; font-weight:700; width:22px; height:22px; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #fff; box-shadow:0 1px 3px rgba(0,0,0,.4) }
+  @media (max-width:899px){
+    #app { display:block; overflow-y:auto }
+    #mapPane { display:none; height:100% }
+    body.mapmode #app { overflow:hidden }
+    body.mapmode main { display:none }
+    body.mapmode #mapPane { display:block }
+  }
+  @media (min-width:900px){ #maptgl { display:none } }
   header { padding: 14px 16px; background: #2e4057; color: #fff; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
   header h1 { font-size: 17px; margin: 0; }
   header .sub { font-size: 12px; opacity:.8 }
@@ -197,8 +214,12 @@
   <span id="jst"></span>
   <span id="countdown"></span>
   <div class="prefs" id="prefs"></div>
+  <span class="pace" id="maptgl" onclick="toggleMap()">🗺 지도</span>
 </header>
+<div id="app">
 <main id="main">로딩 중…</main>
+<div id="mapPane"><div id="map"></div></div>
+</div>
 <div id="pmwrap"></div>
 <div id="toast"></div>
 <script src="data.js"></script>
@@ -308,6 +329,52 @@ function vote(sid,pid){
 }
 function voteCount(sid,pid){return (STATE.votes||{})[sid+"|"+pid]||0}
 function doneToggle(key){send({type:"done",key});}
+
+// --- map view (Leaflet + OSM) ---
+const AREA_CENTER={hakata:[33.5897,130.4207],nakasu:[33.5936,130.4063],tenjin:[33.5902,130.3997],ohori:[33.5863,130.3762],momochi:[33.5934,130.3515],dazaifu:[33.5197,130.5346],yufuin:[33.2659,131.3611]};
+const FIXED_COORDS={f1:[33.5859,130.4508],f2:[33.5923,130.4115],f3:[33.5889,130.4167],f4:[33.5897,130.4207],f5:[33.2650,131.3560],f6:[33.2650,131.3560],f7:[33.2650,131.3560],f8:[33.2659,131.3611],f9:[33.5938,130.4054],f10:[33.5859,130.4508]};
+const DAYCOL=["#2e4057","#c0504d","#4a7a3a","#7a4a9e"];
+function jit(id){let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))|0;const r=h>>>0;return [((r%100)/100-0.5)*0.009,((((r/100)|0)%100)/100-0.5)*0.009]}
+function placeCoord(c){const b=AREA_CENTER[c.area]||AREA_CENTER.hakata;const j=jit(c.id);return [b[0]+j[0],b[1]+j[1]]}
+let map=null,mapLayer=null;
+function initMap(){
+  if(map||!window.L||!document.getElementById("map"))return;
+  map=L.map("map");
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"&copy; OpenStreetMap",maxZoom:19}).addTo(map);
+  mapLayer=L.layerGroup().addTo(map);
+}
+function renderMap(){
+  if(!mapLayer)return;
+  mapLayer.clearLayers();
+  const allPts=[];
+  DAYS.forEach((day,di)=>{
+    const pts=[];
+    const items=[...FIXED.filter(f=>f.date===day.date).map(f=>({t:f.start,type:"f",o:f})),
+      ...SLOTS.filter(s=>s.date===day.date).map(s=>({t:s.start,type:"s",o:s}))].sort((a,b)=>a.t.localeCompare(b.t));
+    let n=0;
+    items.forEach(it=>{
+      if(it.type==="f"){
+        const co=FIXED_COORDS[it.o.id];
+        if(co){pts.push(co);
+          L.circleMarker(co,{radius:5,color:DAYCOL[di],weight:2,fillColor:"#fff",fillOpacity:1})
+            .addTo(mapLayer).bindTooltip(it.o.title,{direction:"top"});}
+      }else{
+        const s=it.o;
+        const chosen=(STATE.selections[s.id]||[]).map(pid=>allCands().find(c=>c.id===pid)).filter(Boolean);
+        if(!chosen.length)return;
+        pts.push(AREA_CENTER[s.anchor]);
+        chosen.forEach(c=>{const co=placeCoord(c);pts.push(co);n++;
+          L.marker(co,{icon:L.divIcon({className:"mnumw",html:`<div class="mnum" style="background:${DAYCOL[di]}">${n}</div>`,iconSize:[22,22],iconAnchor:[11,11]})})
+            .addTo(mapLayer).bindTooltip(c.name,{direction:"top"});});
+      }
+    });
+    if(pts.length>1)L.polyline(pts,{color:DAYCOL[di],weight:3,opacity:.75,dashArray:"6 6"}).addTo(mapLayer);
+    allPts.push(...pts);
+  });
+  if(allPts.length)map.fitBounds(L.latLngBounds(allPts).pad(0.15));
+  setTimeout(()=>map.invalidateSize(),80);
+}
+function toggleMap(){document.body.classList.toggle("mapmode");setTimeout(()=>{if(map)map.invalidateSize()},80);}
 function isDone(key){return (STATE.done||[]).includes(key)}
 
 // weather (open-meteo, no key needed)
@@ -756,6 +823,8 @@ function render(){
   info.innerHTML=renderWeather()+progressHtml()+budgetHtml()+packingHtml()+renderInfo();
   main.appendChild(info);
   loadWeather();
+  initMap();
+  renderMap();
 }
 render();
 </script>
