@@ -271,11 +271,13 @@ function send(msg){
   else if(msg.type==="add_place"){
     const p=msg.place;
     if(!STATE.custom)STATE.custom=[];
-    STATE.custom.push({id:"u_"+Date.now(),name:p.name,area:p.area,
+    const np={id:"u_"+Date.now(),name:p.name,area:p.area,
       tags:p.tags||[],minutes:Math.max(10,Math.min(480,+p.minutes||60)),
       open:p.open||"09:00",close:p.close||"22:00",note:p.note||"",
       maps:p.maps||"https://www.google.com/maps/search/?api=1&query="+p.name,
-      custom:true});
+      custom:true};
+    if(p.coord&&p.coord.length===2)np.coord=p.coord;
+    STATE.custom.push(np);
   }
   else if(msg.type==="del_place"){
     const pid=msg.place_id;
@@ -336,7 +338,7 @@ const AREA_CENTER={hakata:[33.5897,130.4207],nakasu:[33.5936,130.4063],tenjin:[3
 const FIXED_COORDS={f1:[33.5859,130.4508],f2:[33.5923,130.4115],f3:[33.5889,130.4167],f4:[33.5897,130.4207],f5:[33.2650,131.3560],f6:[33.2650,131.3560],f7:[33.2650,131.3560],f8:[33.2659,131.3611],f9:[33.5938,130.4054],f10:[33.5859,130.4508]};
 const DAYCOL=["#2e4057","#c0504d","#4a7a3a","#7a4a9e"];
 function jit(id){let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))|0;const r=h>>>0;return [((r%100)/100-0.5)*0.009,((((r/100)|0)%100)/100-0.5)*0.009]}
-function placeCoord(c){const b=AREA_CENTER[c.area]||AREA_CENTER.hakata;const j=jit(c.id);return [b[0]+j[0],b[1]+j[1]]}
+function placeCoord(c){if(c.coord&&c.coord.length===2)return c.coord;const b=AREA_CENTER[c.area]||AREA_CENTER.hakata;const j=jit(c.id);return [b[0]+j[0],b[1]+j[1]]}
 let map=null,mapLayer=null;
 function initMap(){
   if(map||!window.L||!document.getElementById("map"))return;
@@ -644,6 +646,7 @@ function placeModalHtml(){
       <div class="ptitle">장소 추가</div>
       <label>링크 붙여넣기 (구글맵/타베로그 등)<input id="pl_url" placeholder="https://www.google.com/maps/... 또는 tabelog.com/..." oninput="parseMapsUrl()"></label>
       <label>이름<input id="pl_name" placeholder="예: 야키토리노 하치베이"></label>
+      <input id="pl_coord" type="hidden">
       <div class="prow">
         <label>지역(이동시간 기준)<select id="pl_area">${AREAS.map(a=>`<option>${a}</option>`).join("")}</select></label>
         <label>체류(분)<input id="pl_min" type="number" value="60"></label>
@@ -664,23 +667,28 @@ function closePlaceModal(){document.getElementById("pmodal").style.display="none
 function parseMapsUrl(){
   const u=document.getElementById("pl_url").value.trim();
   const m=u.match(/\/place\/([^/@?]+)/);
-  if(m){document.getElementById("pl_name").value=decodeURIComponent(m[1]).replace(/\+/g," ");return;}
-  if(u.startsWith("http")&&!u.includes("google.com/maps"))
-    fetch("/api/lookup?url="+encodeURIComponent(u)).then(r=>r.json()).then(d=>{
-      if(d.name&&!document.getElementById("pl_name").value)document.getElementById("pl_name").value=d.name;
-    }).catch(()=>{});
+  if(m)document.getElementById("pl_name").value=decodeURIComponent(m[1]).replace(/\+/g," ");
+  const cm=u.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||u.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+  if(cm)document.getElementById("pl_coord").value=cm[1]+","+cm[2];
+  if(!u.startsWith("http"))return;
+  fetch("/api/lookup?url="+encodeURIComponent(u)).then(r=>r.json()).then(d=>{
+    if(d.name&&!document.getElementById("pl_name").value)document.getElementById("pl_name").value=d.name;
+    if(d.lat&&!document.getElementById("pl_coord").value)document.getElementById("pl_coord").value=d.lat+","+d.lng;
+  }).catch(()=>{});
 }
 function addPlace(){
   const name=document.getElementById("pl_name").value.trim();
   if(!name)return alert("이름을 입력하세요");
   const tags=document.getElementById("pl_tags").value.split(",").map(t=>t.trim()).filter(Boolean);
-  send({type:"add_place",place:{
-    name, area:document.getElementById("pl_area").value,
+  const pl={name, area:document.getElementById("pl_area").value,
     minutes:+document.getElementById("pl_min").value||60,
     open:document.getElementById("pl_open").value||"09:00",
     close:document.getElementById("pl_close").value||"22:00",
     tags, note:document.getElementById("pl_note").value.trim(),
-    maps:document.getElementById("pl_url").value.trim()}});
+    maps:document.getElementById("pl_url").value.trim()};
+  const co=document.getElementById("pl_coord").value.split(",");
+  if(co.length===2&&+co[0]&&+co[1])pl.coord=[+co[0],+co[1]];
+  send({type:"add_place",place:pl});
   closePlaceModal();
 }
 
