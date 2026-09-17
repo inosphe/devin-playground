@@ -1,5 +1,5 @@
 const DATA={
- "DAYS": [
+ "days": [
   {
    "date": "2026-10-01",
    "label": "10/1 (목) 하카타"
@@ -17,7 +17,7 @@ const DATA={
    "label": "10/4 (일) 하카타·귀국"
   }
  ],
- "FIXED": [
+ "fixed": [
   {
    "id": "f1",
    "date": "2026-10-01",
@@ -166,7 +166,7 @@ const DATA={
    ]
   }
  ],
- "SLOTS": [
+ "slots": [
   {
    "id": "s1",
    "date": "2026-10-01",
@@ -230,7 +230,7 @@ const DATA={
    "meal_hint": "lunch"
   }
  ],
- "CANDIDATES": [
+ "candidates": [
   {
    "id": "p_ebisuya",
    "name": "에비스야 우동 하카타스미요시",
@@ -578,6 +578,21 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=焼肉きんぐ+天神"
   },
   {
+   "id": "p_hachibei",
+   "name": "야키토리노 하치베이 벳칸",
+   "area": "hakata",
+   "tags": [
+    "맛집",
+    "저녁",
+    "야키토리"
+   ],
+   "minutes": 75,
+   "open": "17:00",
+   "close": "24:00",
+   "note": "스미요시(住吉) 야키토리 유명점. 돼지·닭 꼬치, 예약 권장",
+   "maps": "https://www.google.com/maps/place/焼き鳥の八兵衛+別館/@33.5892,130.4149,17z"
+  },
+  {
    "id": "p_kushida",
    "name": "구시다 신사 + 가와바타 상점가",
    "area": "hakata",
@@ -804,7 +819,7 @@ const DATA={
    "maps": "https://www.google.com/maps/search/?api=1&query=博多駅"
   }
  ],
- "TRAVEL": [
+ "travel": [
   {
    "a": "hakata",
    "b": "hakata",
@@ -901,7 +916,7 @@ const DATA={
    "m": 15
   }
  ],
- "DEFAULT_PREFS": {
+ "prefs": {
   "dislikes": [
    "곱창"
   ],
@@ -915,7 +930,7 @@ const DATA={
   },
   "pace": "relaxed"
  },
- "INFO": {
+ "info": {
   "emergency": [
    {
     "name": "나나카와 료칸",
